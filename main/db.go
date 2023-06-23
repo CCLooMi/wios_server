@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"wios_server/models"
+	"wios_server/entity"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -19,7 +19,7 @@ func InitDB(config *Config) *gorm.DB {
 	}
 
 	// 自动迁移表结构
-	db.AutoMigrate(&models.User{})
+	db.AutoMigrate(&entity.User{})
 
 	return db
 }
