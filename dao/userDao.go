@@ -1,31 +1,27 @@
 package dao
 
 import (
+	"database/sql"
 	"wios_server/entity"
-
-	"github.com/jinzhu/gorm"
 )
 
 type UserDao struct {
 	*BaseDao
 }
 
-func NewUserDao(db *gorm.DB) *UserDao {
+func NewUserDao(db *sql.DB) *UserDao {
 	return &UserDao{BaseDao: NewBaseDao(db)}
 }
 
 func (dao *UserDao) FindById(id uint) (*entity.User, error) {
 	var user entity.User
-	err := dao.Find(&user, "id = ?", id)
-	if err != nil {
-		return nil, err
-	}
+	dao.ById(id, &user)
 	return &user, nil
 }
 
-func (dao *UserDao) FindByPage(pageNumber, pageSize int, conditions ...interface{}) (int64, []entity.User, error) {
+func (dao *UserDao) FindByPage(pageNumber, pageSize int) (int64, []entity.User, error) {
 	var users []entity.User
-	count, err := dao.ByPage(&users, pageNumber, pageSize, conditions...)
+	count, err := dao.ByPage(&users, pageNumber, pageSize)
 	if err != nil {
 		return 0, nil, err
 	}

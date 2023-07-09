@@ -1,67 +1,37 @@
 package dao
 
-import "github.com/jinzhu/gorm"
+import (
+	"database/sql"
+
+	"github.com/CCLooMi/sql-mak/mysql/mak"
+)
 
 type BaseDao struct {
-	db *gorm.DB
+	db *sql.DB
 }
+type ByPage func(sm *mak.SQLSM)
 
-func NewBaseDao(db *gorm.DB) *BaseDao {
+func NewBaseDao(db *sql.DB) *BaseDao {
 	return &BaseDao{db: db}
 }
 
-func (dao *BaseDao) Create(entity interface{}) error {
-	result := dao.db.Create(entity)
-	return result.Error
+func (dao *BaseDao) ById(id interface{}, out interface{}) {
 }
 
-func (dao *BaseDao) Update(entity interface{}) error {
-	result := dao.db.Save(entity)
-	return result.Error
+func (dao *BaseDao) Create(entity interface{}) *sql.Result {
+	return nil
 }
 
-func (dao *BaseDao) Delete(entity interface{}) error {
-	result := dao.db.Delete(entity)
-	return result.Error
+func (dao *BaseDao) Update(entity interface{}) *sql.Result {
+	return nil
+
 }
 
-func (dao *BaseDao) Find(entity interface{}, conditions ...interface{}) error {
-	result := dao.db.First(entity, conditions...)
-	return result.Error
+func (dao *BaseDao) Delete(entity interface{}) *sql.Result {
+	return nil
+
 }
 
-func (dao *BaseDao) ByPage(entity interface{}, pageNumber, pageSize int, conditions ...interface{}) (int64, error) {
-	var count int64
-	if pageNumber == 1 {
-		result := dao.db.Model(entity).Where(toQuery(conditions...)).Count(&count)
-		if result.Error != nil {
-			return -1, result.Error
-		}
-	}
-
-	if pageNumber <= 0 {
-		pageNumber = 1
-	}
-
-	offset := (pageNumber - 1) * pageSize
-	result := dao.db.Model(entity).Where(toQuery(conditions...)).Limit(pageSize).Offset(offset).Find(entity)
-	if result.Error != nil {
-		return -1, result.Error
-	}
-
-	if pageNumber == 1 {
-		return count, nil
-	} else {
-		return -1, nil
-	}
-}
-
-func toQuery(args ...interface{}) interface{} {
-	if len(args) == 0 {
-		return ""
-	}
-	if len(args) == 1 {
-		return args[0]
-	}
-	return args
+func (dao *BaseDao) ByPage(out interface{}, pageNumber, pageSize int) (int64, error) {
+	return 0, nil
 }

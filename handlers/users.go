@@ -1,18 +1,20 @@
 package handlers
 
 import (
+	"database/sql"
+	"net/http"
+	"strconv"
 	"wios_server/dao"
 
-	"github.com/jinzhu/gorm"
-	"github.com/kataras/iris/v12"
+	"github.com/gin-gonic/gin"
 )
 
 // 用户列表查询路由
-func GetUserListHandler(db *gorm.DB) func(ctx iris.Context) {
-	return func(ctx iris.Context) {
+func GetUserListHandler(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
 		// 获取请求参数
-		pageNumber, _ := ctx.URLParamInt("pageNumber")
-		pageSize, _ := ctx.URLParamInt("pageSize")
+		pageNumber, _ := strconv.Atoi(ctx.Query("pageNumber"))
+		pageSize, _ := strconv.Atoi(ctx.Query("pageSize"))
 
 		// 查询用户列表
 		userDao := dao.NewUserDao(db)
@@ -25,6 +27,6 @@ func GetUserListHandler(db *gorm.DB) func(ctx iris.Context) {
 			"users": users,
 		}
 		// 返回用户列表
-		ctx.JSON(result)
+		ctx.JSON(http.StatusOK, result)
 	}
 }

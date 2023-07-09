@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/kataras/iris/v12"
-
 	"wios_server/handlers"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -14,7 +14,7 @@ func main() {
 		panic(err)
 	}
 
-	app := iris.New()
+	app := gin.Default()
 
 	// 初始化数据库
 	db := InitDB(config)
@@ -24,6 +24,6 @@ func main() {
 	handlers.RegisterHandlers(app, db)
 
 	// 启动HTTP服务
-	// app.Run(iris.Addr(":8080"))
-	app.Run(iris.Addr(fmt.Sprintf(":%d", config.Port)))
+	// app.Run(":8080")
+	app.Run(fmt.Sprintf(":%d", config.Port))
 }

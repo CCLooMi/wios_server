@@ -1,28 +1,24 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/jinzhu/gorm"
-	"github.com/kataras/iris/v12"
+	"github.com/gin-gonic/gin"
 )
 
-func serverStaticDir(app *iris.Application) {
+func serverStaticDir(app *gin.Engine) {
 	// 映射静态文件目录
-	app.HandleDir("/public", "./static/public", iris.DirOptions{
-		IndexName: "index.html",
-		ShowList:  true,
-		Compress:  false,
-	})
+	app.Static("/public", "./static/public")
 }
 
-func getFileFromUploadDirHandler(db *gorm.DB) func(ctx iris.Context) {
-	return func(ctx iris.Context) {
+func getFileFromUploadDirHandler(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
 		// 获取 fileId 参数
-		fileId := ctx.Params().Get("fileId")
+		fileId := ctx.Param("fileId")
 
 		// 计算文件路径
 		filePath := getRealPath(fileId)
@@ -31,8 +27,7 @@ func getFileFromUploadDirHandler(db *gorm.DB) func(ctx iris.Context) {
 
 		// 检查文件是否存在
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			ctx.StatusCode(http.StatusNotFound)
-			ctx.WriteString("File not found")
+			ctx.String(http.StatusNotFound, "File not found")
 			return
 		}
 
@@ -40,7 +35,7 @@ func getFileFromUploadDirHandler(db *gorm.DB) func(ctx iris.Context) {
 		ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileId))
 
 		// 返回文件内容
-		ctx.ServeFile(filePath)
+		ctx.File(filePath)
 	}
 
 }
