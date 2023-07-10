@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
-	"wios_server/dao"
+	"wios_server/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,8 +17,8 @@ func GetUserListHandler(db *sql.DB) func(ctx *gin.Context) {
 		pageSize, _ := strconv.Atoi(ctx.Query("pageSize"))
 
 		// 查询用户列表
-		userDao := dao.NewUserDao(db)
-		count, users, err := userDao.FindByPage(pageNumber, pageSize)
+		userService := service.NewUserService(db)
+		count, users, err := userService.FindByPage(pageNumber, pageSize)
 		if err != nil {
 			panic(err)
 		}

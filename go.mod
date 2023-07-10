@@ -5,7 +5,7 @@ go 1.20
 require github.com/shopspring/decimal v1.3.1
 
 require (
-	github.com/CCLooMi/sql-mak v0.0.0-20230709113906-9400cff5ed78 // indirect
+	github.com/CCLooMi/sql-mak v0.0.0-20230710074800-f5bd86b4e2e3 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
