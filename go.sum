@@ -4,6 +4,10 @@ github.com/CCLooMi/sql-mak v0.0.0-20230709113906-9400cff5ed78 h1:entoeFj/Cqwz5vU
 github.com/CCLooMi/sql-mak v0.0.0-20230709113906-9400cff5ed78/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
 github.com/CCLooMi/sql-mak v0.0.0-20230710074800-f5bd86b4e2e3 h1:3aba3V/g08WuTTah+nAJvFkvnY+VGpzIgbQZmh5ePWM=
 github.com/CCLooMi/sql-mak v0.0.0-20230710074800-f5bd86b4e2e3/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
+github.com/CCLooMi/sql-mak v0.0.0-20230710143147-0d2d057127db h1:ppZUTJ1ZJb7TDR59ynd/zwsnif/tMewOsYJS8vFJvqI=
+github.com/CCLooMi/sql-mak v0.0.0-20230710143147-0d2d057127db/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
+github.com/CCLooMi/sql-mak v0.0.0-20230711023915-1fb6c9dcf75c h1:bdZIx9oqIiRlnBaIrRlN8bfxBW4LVJVwfZ+fh0TYkZE=
+github.com/CCLooMi/sql-mak v0.0.0-20230711023915-1fb6c9dcf75c/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=
 github.com/bytedance/sonic v1.9.1 h1:6iJ6NqdoxCDr6mbY8h18oSO+cShGSMRGCEo7F2h0x8s=
 github.com/bytedance/sonic v1.9.1/go.mod h1:i736AoUSYt75HyZLoJW9ERYxcy6eaN6h4BZXU064P/U=

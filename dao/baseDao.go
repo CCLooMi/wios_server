@@ -24,11 +24,11 @@ func (dao *BaseDao) ById(id interface{}, out interface{}) {
 	sm.Execute(dao.db).ExtractorResultTo(out)
 }
 
-func (dao *BaseDao) Create(entity interface{}) sql.Result {
+func (dao *BaseDao) SaveOrUpdate(entity interface{}) sql.Result {
 	ei := utils.GetEntityInfo(entity)
 	im := mysql.INSERT_INTO(entity).ON_DUPLICATE_KEY_UPDATE()
 	for _, col := range ei.Columns {
-		if col != "ID" {
+		if col != ei.PrimaryKey {
 			im.SET("e."+col+"=?", utils.GetFieldValue(entity, ei.CFMap[col]))
 		}
 	}
@@ -39,16 +39,17 @@ func (dao *BaseDao) Update(entity interface{}) sql.Result {
 	ei := utils.GetEntityInfo(entity)
 	um := mysql.UPDATE(entity, "e")
 	for _, col := range ei.Columns {
-		if col != "ID" {
+		if col != ei.PrimaryKey {
 			um.SET("e."+col+"=?", utils.GetFieldValue(entity, ei.CFMap[col]))
 		}
 	}
-	um.WHERE("e.id = ?", utils.GetFieldValue(entity, "ID"))
+	um.WHERE("e."+ei.PrimaryKey+" = ?", utils.GetFieldValue(entity, ei.CFMap[ei.PrimaryKey]))
 	return um.Execute(dao.db).Update()
 }
 
 func (dao *BaseDao) Delete(entity interface{}) sql.Result {
-	dm := mysql.DELETE().FROM(entity).WHERE("id = ?", utils.GetFieldValue(entity, "ID"))
+	ei := utils.GetEntityInfo(entity)
+	dm := mysql.DELETE().FROM(entity).WHERE(ei.PrimaryKey+" = ?", utils.GetFieldValue(entity, ei.CFMap[ei.PrimaryKey]))
 	return dm.Execute(dao.db).Update()
 }
 
