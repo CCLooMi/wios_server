@@ -8,6 +8,7 @@ import (
 
 // 注册路由
 func RegisterHandlers(app *gin.Engine, db *sql.DB) {
+	app.GET("/ws", HandleWebSocket(db))
 	app.GET("/users/byPage", GetUserListHandler(db))
 	app.GET("/upload/{fileId:string}", getFileFromUploadDirHandler(db))
 	serverStaticDir(app)
