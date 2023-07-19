@@ -11,6 +11,8 @@ import (
 )
 
 func serverStaticDir(app *gin.Engine) {
+	//group := app.Group("/wios")
+	//group.GET("/index.html",xxxHandler)
 	// 映射静态文件目录
 	app.Static("/wios", "./static/public/wios")
 }
