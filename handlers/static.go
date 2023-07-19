@@ -12,7 +12,7 @@ import (
 
 func serverStaticDir(app *gin.Engine) {
 	// 映射静态文件目录
-	app.Static("/public", "./static/public")
+	app.Static("/wios", "./static/public/wios")
 }
 
 func getFileFromUploadDirHandler(db *sql.DB) func(ctx *gin.Context) {
