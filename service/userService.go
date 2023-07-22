@@ -22,11 +22,9 @@ func (dao *UserService) FindById(id uint) (*entity.User, error) {
 	return &user, nil
 }
 
-func (dao *UserService) FindByPage(pageNumber, pageSize int) (int64, []entity.User, error) {
+func (dao *UserService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQLSM)) (int64, []entity.User, error) {
 	var users []entity.User
-	count, err := dao.ByPage(&users, pageNumber, pageSize, func(sm *mak.SQLSM) {
-		sm.SELECT("*").FROM(entity.User{}, "u")
-	})
+	count, err := dao.ByPage(&users, pageNumber, pageSize, fn)
 	if err != nil {
 		return 0, users, err
 	}

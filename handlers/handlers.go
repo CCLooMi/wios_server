@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +20,8 @@ func RegisterHandlers(app *gin.Engine, db *sql.DB) {
 		c.Next()
 	})
 	app.GET("/ws", HandleWebSocket(db))
-	app.GET("/users/byPage", GetUserListHandler(db))
 	app.GET("/upload/{fileId:string}", getFileFromUploadDirHandler(db))
+	NewUserController(app, db)
+	NewMenuController(app, db)
 	serverStaticDir(app)
 }
