@@ -2,12 +2,13 @@ package handlers
 
 import (
 	"database/sql"
-	"github.com/CCLooMi/sql-mak/mysql/mak"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 	"wios_server/entity"
 	"wios_server/service"
+
+	"github.com/CCLooMi/sql-mak/mysql/mak"
+	"github.com/gin-gonic/gin"
 )
 
 type MenuController struct {
@@ -18,6 +19,7 @@ func NewMenuController(app *gin.Engine, db *sql.DB) *MenuController {
 	ctrl := &MenuController{menuService: service.NewMenuService(db)}
 	group := app.Group("/menu")
 	group.POST("/listByPage", ctrl.byPage)
+	group.POST("/saveUpdate", ctrl.saveUpdate)
 	return ctrl
 }
 
@@ -36,4 +38,15 @@ func (ctrl *MenuController) byPage(ctx *gin.Context) {
 		"data":  menus,
 	}
 	ctx.JSON(http.StatusOK, result)
+}
+
+func (ctrl *MenuController) saveUpdate(ctx *gin.Context) {
+	//获取post请求的json对象
+	var menu entity.Menu
+	if err := ctx.ShouldBindJSON(&menu); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	var rs = ctrl.menuService.SaveUpdate(&menu)
+	ctx.JSON(http.StatusOK, rs)
 }
