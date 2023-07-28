@@ -29,7 +29,7 @@ func (dao *BaseDao) SaveOrUpdate(entity interface{}) sql.Result {
 	im := mysql.INSERT_INTO(entity).ON_DUPLICATE_KEY_UPDATE()
 	for _, col := range ei.Columns {
 		if col != ei.PrimaryKey {
-			im.SET("e."+col+"=?", utils.GetFieldValue(entity, ei.CFMap[col]))
+			im.SET(col+"=?", utils.GetFieldValue(entity, ei.CFMap[col]))
 		}
 	}
 	return im.Execute(dao.db).Update()

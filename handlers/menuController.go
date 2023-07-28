@@ -44,6 +44,7 @@ func (ctrl *MenuController) saveUpdate(ctx *gin.Context) {
 	//获取post请求的json对象
 	var menu entity.Menu
 	if err := ctx.ShouldBindJSON(&menu); err != nil {
+		panic(err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
