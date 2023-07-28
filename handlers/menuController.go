@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"database/sql"
-	"net/http"
 	"strconv"
 	"wios_server/entity"
+	"wios_server/handlers/msg"
 	"wios_server/service"
 
 	"github.com/CCLooMi/sql-mak/mysql/mak"
@@ -20,6 +20,7 @@ func NewMenuController(app *gin.Engine, db *sql.DB) *MenuController {
 	group := app.Group("/menu")
 	group.POST("/listByPage", ctrl.byPage)
 	group.POST("/saveUpdate", ctrl.saveUpdate)
+	group.POST("/delete", ctrl.delete)
 	return ctrl
 }
 
@@ -37,17 +38,44 @@ func (ctrl *MenuController) byPage(ctx *gin.Context) {
 		"count": count,
 		"data":  menus,
 	}
-	ctx.JSON(http.StatusOK, result)
+	msg.Ok(ctx, result)
 }
 
 func (ctrl *MenuController) saveUpdate(ctx *gin.Context) {
 	//获取post请求的json对象
 	var menu entity.Menu
 	if err := ctx.ShouldBindJSON(&menu); err != nil {
-		panic(err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		msg.Error(ctx, err.Error())
 		return
 	}
 	var rs = ctrl.menuService.SaveUpdate(&menu)
-	ctx.JSON(http.StatusOK, rs)
+	affected, err := rs.RowsAffected()
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	if affected > 0 {
+		msg.Ok(ctx, &menu)
+		return
+	}
+	msg.Error(ctx, "save failed")
+}
+
+func (ctrl *MenuController) delete(ctx *gin.Context) {
+	var menu entity.Menu
+	if err := ctx.ShouldBindJSON(&menu); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	var rs = ctrl.menuService.Delete(&menu)
+	affected, err := rs.RowsAffected()
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	if affected > 0 {
+		msg.Ok(ctx, &menu)
+		return
+	}
+	msg.Error(ctx, "delete failed")
 }

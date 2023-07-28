@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	"strconv"
 	"wios_server/entity"
+	"wios_server/handlers/msg"
 	"wios_server/service"
 )
 
@@ -35,5 +35,5 @@ func (ctrl *UserController) byPage(ctx *gin.Context) {
 		"count": count,
 		"data":  users,
 	}
-	ctx.JSON(http.StatusOK, result)
+	msg.Ok(ctx, result)
 }
