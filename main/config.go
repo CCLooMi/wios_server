@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 )
 
@@ -26,7 +25,7 @@ type Config struct {
 // LoadConfig 从环境变量或配置文件中读取配置
 func LoadConfig() (*Config, error) {
 	// 尝试从配置文件中读取配置
-	data, err := ioutil.ReadFile("conf/config.json")
+	data, err := os.ReadFile("conf/config.json")
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
