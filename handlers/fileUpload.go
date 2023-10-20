@@ -41,13 +41,13 @@ func HandleFileUpload(db *sql.DB) func(ctx *gin.Context) {
 			// 处理消息
 			log.Println("Received message:", string(msg))
 			if msgType == websocket.TextMessage {
-				var fileInfo map[string]interface{}
+				var fileInfo = FileInfo{}
 				err := json.Unmarshal(msg, &fileInfo)
 				if err != nil {
 					fmt.Println("Error:", err)
 					return
 				}
-				go processStrMsg(fileInfo, conn)
+				go processStrMsg(&fileInfo, conn)
 			}
 			if msgType == websocket.BinaryMessage {
 				go processBinMsg(msg, conn)
@@ -61,7 +61,7 @@ func pushStrMsg(msg string, cnn *websocket.Conn) error {
 func pushBinMsg(msg []byte, cnn *websocket.Conn) error {
 	return cnn.WriteMessage(websocket.BinaryMessage, msg)
 }
-func processStrMsg(fileInfo map[string]interface{}, cnn *websocket.Conn) {
+func processStrMsg(fileInfo *FileInfo, cnn *websocket.Conn) {
 	isExist, data := CheckExist(fileInfo)
 	if isExist {
 		pushBinMsg(data, cnn)
@@ -79,6 +79,11 @@ func processBinMsg(msg []byte, cnn *websocket.Conn) {
 	pushBinMsg(cmd.toBytes(), cnn)
 }
 
+type FileInfo struct {
+	Id   string `json:"id"`
+	Size int64  `json:"size"`
+	Name string `json:"name"`
+}
 type FileAgent struct {
 	Size      int64
 	BasePath  string
@@ -135,8 +140,8 @@ const BlobSize = 524288
 
 var agentMap = make(map[string]*FileAgent)
 
-func CheckExist(fileInfo map[string]interface{}) (bool, []byte) {
-	fid := fileInfo["id"].(string)
+func CheckExist(fileInfo *FileInfo) (bool, []byte) {
+	fid := fileInfo.Id
 	bid, _ := hex.DecodeString(fid)
 	a := uint(bid[0]) >> 6
 	b := uint(bid[1]) >> 6
@@ -156,8 +161,8 @@ func CheckExist(fileInfo map[string]interface{}) (bool, []byte) {
 		return false, cmd.toBytes()
 	}
 }
-func NewFileAgen(fileInfo map[string]interface{}, basePath string) (*FileAgent, error) {
-	size := fileInfo["size"].(int64)
+func NewFileAgen(fileInfo *FileInfo, basePath string) (*FileAgent, error) {
+	size := fileInfo.Size
 	err := os.MkdirAll(basePath, os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -219,7 +224,7 @@ func GetIStart(bSet []byte, iStart int64) int64 {
 		if i >= max {
 			return -1
 		}
-		bi := bSet[i] | (255 << (7 - (iStart & 7)))
+		bi := bSet[i] | (255 << (8 - (iStart & 7)))
 		if bi != 255 {
 			return int64((i << 3) + int64(iSetMap[bi]))
 		}
@@ -227,7 +232,7 @@ func GetIStart(bSet []byte, iStart int64) int64 {
 	return -1
 }
 func SetPositionValue(bSet []byte, i int64) {
-	bSet[i>>3] |= 1 << (7 - (i & 7))
+	bSet[i>>3] |= 1 << (8 - (i & 7))
 }
 
 func NewBSet(fSize int64) []byte {
