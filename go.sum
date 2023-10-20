@@ -1,9 +1,3 @@
-github.com/CCLooMi/sql-mak v0.0.0-20230711023915-1fb6c9dcf75c h1:bdZIx9oqIiRlnBaIrRlN8bfxBW4LVJVwfZ+fh0TYkZE=
-github.com/CCLooMi/sql-mak v0.0.0-20230711023915-1fb6c9dcf75c/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
-github.com/CCLooMi/sql-mak v0.0.0-20230727093420-398c9ad877c2 h1:vKMnJuN+Zi89CuxjCrq1kFQn4pLv48rR5DE0st/kEik=
-github.com/CCLooMi/sql-mak v0.0.0-20230727093420-398c9ad877c2/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
-github.com/CCLooMi/sql-mak v0.0.0-20230728021048-8b10b6dc2989 h1:Wj1zGxKLE3lrw7Zoto403+vF91oMeMFwllSMbCSFnLc=
-github.com/CCLooMi/sql-mak v0.0.0-20230728021048-8b10b6dc2989/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
 github.com/CCLooMi/sql-mak v0.0.0-20230728031221-f4d63b4031db h1:kJJlSoq0OQ1mT6ARMc3RkYFjpnnrbfuiWtccKhWHQNg=
 github.com/CCLooMi/sql-mak v0.0.0-20230728031221-f4d63b4031db/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=
@@ -56,8 +50,6 @@ github.com/pelletier/go-toml/v2 v2.0.8 h1:0ctb6s9mE31h0/lhu+J6OPmVeDxJn+kYnJc2jZ
 github.com/pelletier/go-toml/v2 v2.0.8/go.mod h1:vuYfssBdrU2XDZ9bYydBu6t+6a6PYNcZljzZR9VXg+4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
-github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

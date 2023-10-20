@@ -11,7 +11,7 @@ func RegisterHandlers(app *gin.Engine, db *sql.DB) {
 	app.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(200)
@@ -20,6 +20,7 @@ func RegisterHandlers(app *gin.Engine, db *sql.DB) {
 		c.Next()
 	})
 	app.GET("/ws", HandleWebSocket(db))
+	app.GET("/fileUp", HandleFileUpload(db))
 	app.GET("/upload/{fileId:string}", getFileFromUploadDirHandler(db))
 	NewUserController(app, db)
 	NewMenuController(app, db)
