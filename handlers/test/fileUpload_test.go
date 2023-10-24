@@ -21,7 +21,7 @@ func TestGetIStart(t *testing.T) {
 	bs := handlers.NewBSet(8 * 512 * 1024)
 	handlers.SetPositionValue(bs, 64)
 	i := handlers.GetIStart(bs, 0)
-	if i != 0 {
+	if i != 1 {
 		t.Errorf("i = %d; expected %d", i, 1)
 		return
 	}
