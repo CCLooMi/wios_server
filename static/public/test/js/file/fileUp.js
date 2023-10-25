@@ -140,7 +140,6 @@
         }
         return bytesToHex(new Uint8Array(bid));
     }
-    window.uuid=uuid;
     if(!Object.prototype._uuid){
         Object.defineProperty(Object.prototype,'_uuid',{
             enumerable:false,
