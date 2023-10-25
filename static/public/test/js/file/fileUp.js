@@ -335,15 +335,13 @@
         var reader = new FileReader();
         function pushData(arrayBuf,cmd,channel,callback) {
             const bid = hexToBytes(file.id);
-            const dataLen = 4+bid.length+8+8+arrayBuf.byteLength;
+            const dataLen = 4+bid.length+arrayBuf.byteLength;
             const dataAB = new ArrayBuffer(dataLen);
             const dataView = new DataView(dataAB);
             const dataUA = new Uint8Array(dataAB);
             dataView.setUint32(0,bid.length);
             dataUA.set(bid,4);
-            dataView.setBigUint64(4+bid.length,BigInt(cmd.idx));
-            dataView.setBigUint64(12+bid.length,BigInt(cmd.start));
-            dataUA.set(new Uint8Array(arrayBuf),20+bid.length);
+            dataUA.set(new Uint8Array(arrayBuf),4+bid.length);
             channel.pushFileData(dataAB)
                 .receive(function (cmd) {
                     fileProgress(file,cmd)
