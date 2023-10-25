@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FileUploadDemo</title>
+    <script src="js/file/fileUp.js"></script>
+    <style>
+        html,body{
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: lightgray;
+        }
+    </style>
+</head>
+<body>
+<script>
+    // const wsUrl = location.origin.replace('http','ws')+'/fileUp';
+    // const ws = new WebSocket(wsUrl);
+    // ws.onmessage = function (event) {
+    //     console.log(event.data);
+    // }
+    // ws.onopen = function (event) {
+    //     ws.send('hello');
+    //     ws.send(new Blob(['World']));
+    // }
+    const fu = new FileUp(document.body,{
+        uploadUrl:'ws://localhost:4040/fileUp',
+        worker:'js/file/hashWorker.js',
+        deps:['js/idb.js','js/crypto-js.js'],
+        fileSelect:function (files) {
+            files.forEach(f=>{
+                f.progress=function (p) {
+                    console.log(p);
+                }
+            })
+        },
+        onComplete:function (file,channel,e) {
+            console.log(['complete',file,channel,e]);
+        }
+    });
+</script>
+</body>
+</html>
