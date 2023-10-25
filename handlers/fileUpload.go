@@ -74,7 +74,8 @@ func processStrMsg(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
 	CheckExist(fileInfo, cnn, cnnAddress)
 }
 func processBinMsg(msg []byte, cnn *websocket.Conn, cnnAddress int64) {
-	bid := msg[:32]
+	bidLen := binary.BigEndian.Uint32(msg[:4])
+	bid := msg[4 : 4+bidLen]
 	id := hex.EncodeToString(bid)
 	fa := agentMap[id]
 
@@ -84,7 +85,7 @@ func processBinMsg(msg []byte, cnn *websocket.Conn, cnnAddress int64) {
 		cmd = &UploadCommand{Id: bid}
 		cmdMap[cnnAddress] = cmd
 	} else {
-		fa.CommandComplete(cmd, msg[32:])
+		fa.CommandComplete(cmd, msg[4+bidLen:])
 	}
 	fa.NextCommand(cmd)
 	pushBinMsg(cmd.toBytes(), cnn)
@@ -137,14 +138,19 @@ type UploadCommand struct {
 }
 
 func (cmd *UploadCommand) toBytes() []byte {
-	return append(cmd.Id,
-		Int64ToBytes(cmd.Start,
+	idLen := len(cmd.Id)
+	bb := make([]byte, 4+idLen)
+	binary.BigEndian.PutUint32(bb, uint32(idLen))
+	copy(bb[4:], cmd.Id)
+	return append(
+		bb,
+		int64ToBytes(cmd.Start,
 			cmd.End,
 			cmd.Uploaded,
 			cmd.Total,
 			cmd.Idx)...)
 }
-func Int64ToBytes(values ...int64) []byte {
+func int64ToBytes(values ...int64) []byte {
 	var result []byte
 	for _, value := range values {
 		bytesBuffer := make([]byte, 8)
