@@ -125,8 +125,7 @@ func (cmd *UploadCommand) toBytes() []byte {
 		int64ToBytes(cmd.Start,
 			cmd.End,
 			cmd.Uploaded,
-			cmd.Total,
-			cmd.Idx)...)
+			cmd.Total)...)
 }
 func (cmd *UploadCommand) hexId() string {
 	return hex.EncodeToString(cmd.Id)

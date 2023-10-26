@@ -424,7 +424,8 @@
                         callback(file,channel);
                     }else{
                         readFileByBlock(reader,file,cmd)
-                            .then(ab=>pushData(ab,cmd,channel,callback),e=>callback(file,channel,e));
+                            .then(ab=>pushData(ab,cmd,channel,callback),
+                                    e=>callback(file,channel,e));
                     }
                 });
         }
@@ -493,12 +494,11 @@
                             const end = Number(dv.getBigInt64(idLen+4+8));
                             const uploaded = Number(dv.getBigInt64(idLen+4+16));
                             const total = Number(dv.getBigInt64(idLen+4+24));
-                            const idx = Number(dv.getBigInt64(idLen+4+32));
                             callback.call(this,{
                                 id:bytesToHex(id),
                                 start:start,end:end,
                                 uploaded:uploaded,total:total,
-                                complete:uploaded/total,idx:idx,
+                                complete:uploaded/total
                             });
                             return;
                         }
@@ -582,6 +582,9 @@
                 (function (file,worker) {
                     doHash(algo, file, worker).then(hash=>{
                         file.id=hash;
+                        if(file.onHashComplete instanceof Function){
+                            file.onHashComplete();
+                        }
                         $this.filesToUpload.push(file);
                         $this.startUpload(callback);
                         //hashNextFile
