@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql/entity"
 )
 
@@ -24,4 +25,13 @@ func UUID() *entity.ID {
 	}
 	id := entity.ID(b)
 	return &id
+}
+func GetFPathByFid(fid string) string {
+	bid, err := hex.DecodeString(fid)
+	if err != nil {
+		return ""
+	}
+	a := int(bid[0])
+	b := int(bid[1])
+	return fmt.Sprintf("/%d/%d/%s", a, b, fid)
 }

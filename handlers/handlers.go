@@ -19,10 +19,10 @@ func RegisterHandlers(app *gin.Engine, db *sql.DB) {
 		}
 		c.Next()
 	})
-	app.GET("/ws", HandleWebSocket(db))
-	app.GET("/fileUp", HandleFileUpload(db))
-	app.GET("/upload/{fileId:string}", getFileFromUploadDirHandler(db))
+	HandleWebSocket(app, db)
+	HandleFileUpload(app, db)
+	ServerUploadFile(app, db)
 	NewUserController(app, db)
 	NewMenuController(app, db)
-	serverStaticDir(app)
+	ServerStaticDir(app)
 }

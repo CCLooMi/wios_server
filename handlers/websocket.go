@@ -8,8 +8,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func HandleWebSocket(db *sql.DB) func(ctx *gin.Context) {
-	return func(c *gin.Context) {
+func HandleWebSocket(app *gin.Engine, db *sql.DB) {
+	app.GET("/ws", func(c *gin.Context) {
 		// 升级HTTP连接为WebSocket连接
 		upgrader := websocket.Upgrader{}
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -38,5 +38,5 @@ func HandleWebSocket(db *sql.DB) func(ctx *gin.Context) {
 				break
 			}
 		}
-	}
+	})
 }

@@ -9,6 +9,8 @@ import (
 // FileServer config
 type FileServerConfig struct {
 	SaveDir string `json:"saveDir"`
+	Path    string `json:"path"`
+	MaxSize int64  `json:"maxSize"`
 }
 
 // DBConfig 包含 MySQL 数据库连接信息

@@ -11,9 +11,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"unsafe"
 	"wios_server/conf"
+	"wios_server/utils"
 )
 
 const BlobSize = 524288
@@ -176,9 +178,7 @@ func NewFileAgen(fileInfo *FileInfo, basePath string, bid []byte) (*FileAgent, e
 func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
 	fid := fileInfo.Id
 	bid, _ := hex.DecodeString(fid)
-	a := uint(bid[0]) >> 6
-	b := uint(bid[1]) >> 6
-	basePath := filepath.Join(conf.Cfg.FileServer.SaveDir, fmt.Sprintf("%d/%d/%s", a, b, fid))
+	basePath := path.Join(conf.Cfg.FileServer.SaveDir, utils.GetFPathByFid(fid))
 	if _, err := os.Stat(filepath.Join(basePath, "0")); err == nil {
 		pushBinMsg(bid, cnn)
 	} else {
@@ -251,8 +251,9 @@ func NewBSet(fSize int64) []byte {
 	}
 }
 
-func HandleFileUpload(db *sql.DB) func(ctx *gin.Context) {
-	return func(c *gin.Context) {
+func HandleFileUpload(app *gin.Engine, db *sql.DB) {
+	path := conf.Cfg.FileServer.Path
+	app.GET(path, func(c *gin.Context) {
 		// 升级HTTP连接为WebSocket连接
 		upgrader := websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -290,7 +291,7 @@ func HandleFileUpload(db *sql.DB) func(ctx *gin.Context) {
 				onBinMsg(msg, conn, address)
 			}
 		}
-	}
+	})
 }
 func onOpen(cnn *websocket.Conn, cnnAddress int64) {
 

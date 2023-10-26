@@ -1,6 +1,8 @@
 {
     "fileServer": {
-        "saveDir": "static/upload"
+        "saveDir": "static/upload",
+        "path": "/fileUp",
+        "maxSize": 0
     },
     "db": {
         "host": "127.0.0.1",

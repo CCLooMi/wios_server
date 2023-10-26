@@ -2,23 +2,24 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
-
-	"github.com/gin-gonic/gin"
+	"path"
+	"wios_server/conf"
+	"wios_server/utils"
 )
 
-func serverStaticDir(app *gin.Engine) {
+func ServerStaticDir(app *gin.Engine) {
 	//group := app.Group("/wios")
 	//group.GET("/index.html",xxxHandler)
 	// 映射静态文件目录
 	app.Static("/wios", "./static/public/wios")
 }
 
-func getFileFromUploadDirHandler(db *sql.DB) func(ctx *gin.Context) {
-	return func(ctx *gin.Context) {
+func ServerUploadFile(app *gin.Engine, db *sql.DB) {
+	app.GET("/upload/:fileId", func(ctx *gin.Context) {
 		// 获取 fileId 参数
 		fileId := ctx.Param("fileId")
 
@@ -38,21 +39,11 @@ func getFileFromUploadDirHandler(db *sql.DB) func(ctx *gin.Context) {
 
 		// 返回文件内容
 		ctx.File(filePath)
-	}
-
+	})
 }
 
 func getRealPath(fid string) string {
-	// 将 fid 参数转换为字节数组
-	bid, err := hex.DecodeString(fid)
-	if err != nil {
-		return ""
-	}
-
-	// 从字节数组中获取 a 和 b 的值
-	a := int(bid[0])
-	b := int(bid[1])
-
-	// 返回结果
-	return fmt.Sprintf("static/upload/%d/%d/%s/0", a, b, fid)
+	return path.Join(
+		conf.Cfg.FileServer.SaveDir,
+		utils.GetFPathByFid(fid), "0")
 }
