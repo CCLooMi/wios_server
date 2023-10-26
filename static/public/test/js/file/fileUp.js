@@ -434,8 +434,8 @@
             if (file.progress instanceof Function) {
                 file.progress({
                     type:'upload',
-                    loaded: cmd.complete*100,
-                    total: 100,
+                    loaded: cmd.uploaded,
+                    total: cmd.total,
                     progress: cmd.complete,
                     speed: file.speeder.speed,
                     leftTime: file.speeder.leftTime
