@@ -99,6 +99,82 @@
         }
         return new Uint8Array(bytes);
     }
+    const formats = [
+        'Byte',1,
+        'KB', 1000,
+        'MB', 1000,
+        'GB', 1000,
+        'TB', 1000,
+        'PB', 1000,
+        'EB', 1000,
+        'ZB', 1000,
+        'YB', 1000,
+        'BB', 1000
+    ];
+    function formatSize(fileSize,l){
+        var r=fileSize;
+        var radix = Math.pow(10, l||2);
+        for(var i=0;i<formats.length;i+=2){
+            r = r / formats[i+1];
+            if (r >= 1 && r < 1000) {
+                r = parseInt(r * radix, 10) / radix + formats[i];
+                break;
+            }
+        }
+        return r;
+    };
+    function formatDuration(time){
+        time = time>>0;
+        const s=1000,m=s*60,h=m*60,d=h*24,w=d*7;
+        const week = (time/w)>>0;
+        time = time%w;
+        const days = (time/d)>>0;
+        time = time%d;
+        const hours = (time/h)>>0;
+        time = time%h;
+        const minutes = (time/m)>>0;
+        time = time%m;
+        let seconds = (time/s)>>0;
+        time = time%s;
+        if(time){
+            seconds+=1;
+        }
+        const a=[[week,'w'],[days,'d'],[hours,'h'],[minutes,'m'],[seconds,'s']];
+        return a.filter(ai=>ai[0])
+            .map(ai=>ai.join(''))
+            .join('')||'0s';
+    }
+    class Speeder {
+        constructor(total) {
+            this.total=total;
+            this.c=3;
+            this.vs=[];
+            this.ts=[];
+            this.i=0;
+        }
+        update(value){
+            const idx=this.i%this.c;
+            this.vs[idx]=value;
+            this.ts[idx]=Date.now();
+            this.i++;
+            const t=Math.max(...this.ts)-Math.min(...this.ts);
+            const v=Math.max(...this.vs)-Math.min(...this.vs);
+            const speed = v/t;
+            if(t){
+                this.speed=`${formatSize(speed*1000,2)}/s`;
+                this.leftTime=formatDuration((this.total-(Math.max(...this.vs)))/speed);
+            }else{
+                this.speed=`---/s`;
+                this.leftTime='---';
+            }
+            return this.speed;
+        }
+        reset(){
+            this.vs=[];
+            this.ts=[];
+            this.i=0;
+        }
+    }
 
     //for watchInDomTree
     function clearObjProperties(...objs) {
@@ -290,9 +366,8 @@
                         return;
                     }
                     var block = d.block;
+                    file.speeder.update(block.end);
                     if (file.progress instanceof Function) {
-                        var time = Date.now() - block.time;
-                        var speed = parseInt(block.end / time / 1000, 10) + 'MB/s';
                         file.progress({
                             type:'hash',
                             loaded: block.end,
@@ -300,7 +375,8 @@
                             blockSize: block.end - block.start,
                             progress: block.end / file.size,
                             result: d.result,
-                            speed: speed
+                            speed: file.speeder.speed,
+                            leftTime: file.speeder.leftTime
                         });
                     }
                     if (d.result) {
@@ -320,7 +396,6 @@
                 })
                 .getDispose();
             readFile(reader, file, {
-                time: Date.now(),
                 fileSize: file.size,
                 start: 0,
                 end: (BUF_SIZE > file.size ? file.size : BUF_SIZE)
@@ -331,6 +406,7 @@
         });
     }
     function doUpload(file,channel,callback) {
+        file.speeder.reset();
         var reader = new FileReader();
         function pushData(arrayBuf,cmd,channel,callback) {
             const bid = hexToBytes(file.id);
@@ -353,13 +429,21 @@
                 });
         }
         function fileProgress(file,cmd) {
+            file.speeder.update(cmd.uploaded);
             if (file.progress instanceof Function) {
                 file.progress({
                     type:'upload',
                     loaded: cmd.complete*100,
                     total: 100,
-                    progress: cmd.complete
+                    progress: cmd.complete,
+                    speed: file.speeder.speed,
+                    leftTime: file.speeder.leftTime
                 });
+            }
+            if(cmd.complete===1){
+                if(file.onComplete instanceof Function){
+                    file.onComplete();
+                }
             }
         }
         channel.pushFileInfo({id:file.id,size:file.size,name:file.name})
@@ -369,7 +453,8 @@
                     callback(file,channel);
                 }else{
                     readFileByBlock(reader,file,cmd)
-                        .then(ab=>pushData(ab,cmd,channel,callback),e=>callback(file,channel,e));
+                        .then(ab=>pushData(ab,cmd,channel,callback),
+                                e=>callback(file,channel,e));
                 }
             });
     }
@@ -493,6 +578,7 @@
                     this.workerCount++;
                 }
                 file.worker = _worker;
+                file.speeder = new Speeder(file.size);
                 (function (file,worker) {
                     doHash(algo, file, worker).then(hash=>{
                         file.id=hash;

@@ -180,28 +180,33 @@ func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
 	bid, _ := hex.DecodeString(fid)
 	basePath := path.Join(conf.Cfg.FileServer.SaveDir, utils.GetFPathByFid(fid))
 	if _, err := os.Stat(filepath.Join(basePath, "0")); err == nil {
-		pushBinMsg(bid, cnn)
-	} else {
-		fa := agentMap[fid]
-		if fa == nil {
-			fa, err = NewFileAgen(fileInfo, basePath, bid)
-			if err != nil {
-				panic(err)
-			}
-		}
-		refFa := uploaderMap[cnnAddress]
-		if refFa != nil {
-			delete(refFa.Uploader, cnnAddress)
-		}
-		uploaderMap[cnnAddress] = fa
-		fa.Uploader[cnnAddress] = true
-
-		agentMap[fid] = fa
-		cmd := &UploadCommand{Id: bid}
-		fa.NextCommand(cmd)
-		cmdMap[cnnAddress] = cmd
-		pushBinMsg(cmd.toBytes(), cnn)
+		idLen := len(bid)
+		bb := make([]byte, 4+idLen)
+		binary.BigEndian.PutUint32(bb, uint32(idLen))
+		copy(bb[4:], bid)
+		pushBinMsg(bb, cnn)
+		return
 	}
+	fa := agentMap[fid]
+	var err error
+	if fa == nil {
+		fa, err = NewFileAgen(fileInfo, basePath, bid)
+		if err != nil {
+			panic(err)
+		}
+	}
+	refFa := uploaderMap[cnnAddress]
+	if refFa != nil {
+		delete(refFa.Uploader, cnnAddress)
+	}
+	uploaderMap[cnnAddress] = fa
+	fa.Uploader[cnnAddress] = true
+
+	agentMap[fid] = fa
+	cmd := &UploadCommand{Id: bid}
+	fa.NextCommand(cmd)
+	cmdMap[cnnAddress] = cmd
+	pushBinMsg(cmd.toBytes(), cnn)
 }
 func GetIStart(bSet []byte, iStart int64) int64 {
 	max := int64(binary.BigEndian.Uint64(bSet[:8]))
