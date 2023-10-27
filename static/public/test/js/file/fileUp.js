@@ -216,7 +216,7 @@
         }
         return bytesToHex(new Uint8Array(bid));
     }
-    if(!Object.prototype._uuid){
+    if(!Object.prototype.hasOwnProperty('_uuid')){
         Object.defineProperty(Object.prototype,'_uuid',{
             enumerable:false,
             get:function () {
@@ -301,9 +301,9 @@
         if(!initWK){
             initWK=new Promise(function (resolve, reject) {
                 const ps=[];
-                if(worker instanceof Blob){
+                if(worker instanceof Blob||worker instanceof Promise){
                     ps.push(worker);
-                }else{
+                }else if(typeof worker=='string'){
                     ps.push(httpGet(worker));
                 }
                 for(let i=0;i<deps.length;i++){
@@ -425,7 +425,7 @@
                     }else{
                         readFileByBlock(reader,file,cmd)
                             .then(ab=>pushData(ab,cmd,channel,callback),
-                                    e=>callback(file,channel,e));
+                                e=>callback(file,channel,e));
                     }
                 });
         }
@@ -455,14 +455,34 @@
                 }else{
                     readFileByBlock(reader,file,cmd)
                         .then(ab=>pushData(ab,cmd,channel,callback),
-                                e=>callback(file,channel,e));
+                            e=>callback(file,channel,e));
                 }
             });
     }
     function Channel(url){
-        this.url=url||
-            this.url||
-            location.origin.replace('http', 'ws')+'/fileUp';
+        if(url){
+            if(url.startsWith('http://')||url.startsWith('https://')){
+                this.url = url.replace('http','ws');
+            }if(url.startsWith('ws://')||url.startsWith('wss://')){
+                this.url = url;
+            }else if(url.startsWith('://')){
+                this.url = location.protocol
+                        .replace('http','ws')
+                    +url.substring(1);
+            }else{
+                if(url.charAt(0)!=='/'){
+                    url='/'+url;
+                }
+                this.url=location.origin
+                        .replace('http', 'ws')
+                    +url;
+            }
+        }else{
+            this.url=this.url||
+                location.origin
+                    .replace('http', 'ws')
+                +'/fileUp';
+        }
         this.callbacks=[];
         function callback() {
             let c;
@@ -478,11 +498,13 @@
                 })
                 .on('close',()=> {
                     this.dispose();
-                    console.log(`Disconnected from [ ${this.url} ]`);
-                    setTimeout( ()=> {
-                        console.log(`Reconnecting to [ ${this.url} ]`);
-                        newWebSocket.call(this);
-                    },500);
+                    if(this.exit!==true){
+                        console.log(`Disconnected from [ ${this.url} ]`);
+                        setTimeout( ()=> {
+                            console.log(`Reconnecting to [ ${this.url} ]`);
+                            newWebSocket.call(this);
+                        },500);
+                    }
                 })
                 .on('message',e=>{
                     e.data.arrayBuffer().then( data=> {
@@ -531,10 +553,23 @@
                     }
                 }
             }
+        },
+        close:function () {
+            this.exit=true;
+            channelCount=0;
+            try{this.socket.close();}
+            catch (e) {}
         }
     }
+    const channels=[];
+    var channelCount=0;
+    const uploaders=[];
     function FileUp(ele,option) {
+        if(!ele instanceof HTMLElement){
+            throw new Error('the fist argument must be HTMLElement');
+        }
         option=option||{};
+        this.option=option;
         this.filesToHash=[];
         this.filesToUpload=[];
         this.workerCount=0;
@@ -545,9 +580,13 @@
                 option.fileSelect(files);
             }
             this.filesToHash.push(...files);
-            this.startHash('SHA256',null,option.onComplete);
+            this.start();
         }
-        this.channels=[new Channel(option.uploadUrl)];
+        if(channelCount===0){
+            channelCount=1;
+            channels.push(new Channel(option.uploadUrl));
+        }
+        uploaders.push(this);
         initWKBlob(option.worker,...option.deps||[])
             .then(wkBlob=>{
                 this.wkBlob=wkBlob;
@@ -558,11 +597,31 @@
                     .on('dragover', e => (e.preventDefault(), e.stopPropagation()))
                     .on('drop', this.fileSelect)
                     .on('click', e => this.finput.click())
-                    .getDispose(dsp=>watchInDomTree(ele,dsp));
+                    .getDispose(dsp=> {
+                        watchInDomTree(ele, () =>{
+                            dsp(),this.dispose();
+                        })
+                    });
             });
     }
     FileUp.prototype={
-        startHash:function (algo, worker, callback) {
+        start:function () {
+            const opt = this.option;
+            this.startHash('SHA256',null,function () {
+                if(opt.onComplete instanceof Function){
+                    opt.onComplete();
+                }
+                for(var i=0,fi;i<uploaders.length;i++){
+                    fi=uploaders[i];
+                    if(fi===this){
+                        continue;
+                    }
+                    fi.start();
+                    break;
+                }
+            });
+        },
+        startHash:function (algo, worker, onComplete) {
             var $this=this;
             while (worker || this.workerCount < this.maxWorkers) {
                 var file = this.filesToHash.shift();
@@ -586,7 +645,7 @@
                             file.onHashComplete();
                         }
                         $this.filesToUpload.push(file);
-                        $this.startUpload(callback);
+                        $this.startUpload(onComplete);
                         //hashNextFile
                         $this.startHash(algo,worker);
                     });
@@ -596,22 +655,31 @@
                 }
             }
         },
-        startUpload:function (callback) {
-            var channel=this.channels.shift();
+        startUpload:function (onComplete) {
+            var channel=channels.shift();
             if(channel){
                 var file = this.filesToUpload.shift();
                 if (!file) {
-                    this.channels.push(channel);
-                    if(callback instanceof Function){
-                        callback();
+                    channels.push(channel);
+                    if(onComplete instanceof Function){
+                        onComplete();
                     }
                     return;
                 }
                 doUpload(file,channel, (file,channel,err)=>{
-                    this.channels.push(channel);
-                    this.startUpload(callback);
+                    channels.push(channel);
+                    this.startUpload(onComplete);
                     err&&console.error(err);
                 });
+            }
+        },
+        dispose:function () {
+            uploaders.splice(uploaders.indexOf(this),1);
+            if(!uploaders.length){
+                var ch;
+                while ((ch=channels.shift())){
+                    ch.close();
+                }
             }
         }
     }

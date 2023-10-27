@@ -28,23 +28,26 @@
 
 </script>
 <script>
-    const dropArea = document.createElement('drop-area');
-    document.body.append(dropArea);
-    const fu = new FileUp(dropArea,{
-        uploadUrl:'ws://localhost:4040/fileUp',
-        worker:'js/file/hashWorker.js',
-        deps:['js/idb.js','js/crypto-js.js'],
-        fileSelect:function (files) {
-            files.forEach(f=>{
-                f.progress=function (p) {
-                    console.log(p);
-                }
-            })
-        },
-        onComplete:function (file,channel,e) {
-            console.log(['complete',file,channel,e]);
-        }
-    });
+    for(var i=0;i<2;i++){
+        const dropArea = document.createElement('drop-area');
+        document.body.append(dropArea);
+        const fu = new FileUp(dropArea,{
+            multiple:true,
+            uploadUrl:'ws://localhost:4040/fileUp',
+            worker:'js/file/hashWorker.js',
+            deps:['js/idb.js','js/crypto-js.js'],
+            fileSelect:function (files) {
+                files.forEach(f=>{
+                    f.progress=function (p) {
+                        console.log(p);
+                    }
+                })
+            },
+            onComplete:function (file,channel,e) {
+                console.log(['complete',file,channel,e]);
+            }
+        });
+    }
 </script>
 </body>
 </html>
