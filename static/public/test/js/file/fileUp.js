@@ -489,7 +489,7 @@
                         let dv = new DataView(data);
                         const idLen = Number(dv.getInt32(0));
                         const id = new Uint8Array(data,4,idLen);
-                        if(data.byteLength>idLen){
+                        if(data.byteLength>idLen+4){
                             const start = Number(dv.getBigInt64(idLen+4));
                             const end = Number(dv.getBigInt64(idLen+4+8));
                             const uploaded = Number(dv.getBigInt64(idLen+4+16));

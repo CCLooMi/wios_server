@@ -16,6 +16,7 @@ func ServerStaticDir(app *gin.Engine) {
 	//group.GET("/index.html",xxxHandler)
 	// 映射静态文件目录
 	app.Static("/wios", "./static/public/wios")
+	app.Static("/test", "./static/public/test")
 }
 
 func ServerUploadFile(app *gin.Engine, db *sql.DB) {
