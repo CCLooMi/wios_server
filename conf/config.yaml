@@ -1,0 +1,12 @@
+fileServer:
+  saveDir: static/upload
+  path: /fileUp
+  maxSize: 0
+db:
+  host: 127.0.0.1
+  port: 3306
+  name: wpp_store
+  user: root
+  password: apple
+log_level: debug
+port: 4040

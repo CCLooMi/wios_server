@@ -1,44 +1,44 @@
 package conf
 
 import (
-	"encoding/json"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 	"os"
 )
 
 // FileServer config
 type FileServerConfig struct {
-	SaveDir string `json:"saveDir"`
-	Path    string `json:"path"`
-	MaxSize int64  `json:"maxSize"`
+	SaveDir string `yaml:"saveDir"`
+	Path    string `yaml:"path"`
+	MaxSize int64  `yaml:"maxSize"`
 }
 
 // DBConfig 包含 MySQL 数据库连接信息
 type DBConfig struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Name     string `json:"name"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Name     string `yaml:"name"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 // Config 包含应用程序的所有配置信息
 type Config struct {
-	FileServer FileServerConfig `json:"fileServer"`
-	DB         DBConfig         `json:"db"`
-	LogLevel   string           `json:"log_level"`
-	Port       int              `json:"port"`
+	FileServer FileServerConfig `yaml:"fileServer"`
+	DB         DBConfig         `yaml:"db"`
+	LogLevel   string           `yaml:"log_level"`
+	Port       int              `yaml:"port"`
 }
 
 func LoadConfig(configFile string) (*Config, error) {
 	data, err := os.ReadFile(configFile)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if os.IsNotExist(err) {
 			return nil, err
 		}
 	}
 	var config Config
-	err = json.Unmarshal(data, &config)
+	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +48,10 @@ func LoadConfig(configFile string) (*Config, error) {
 var Cfg *Config
 
 func init() {
-	config, err := LoadConfig("conf/config.json")
+	cfgName := "config.yaml"
+	config, err := LoadConfig("conf/" + cfgName)
 	if err != nil {
-		config, err = LoadConfig("config.json")
+		config, err = LoadConfig(cfgName)
 		if err != nil {
 			logrus.Warnf("failed to load config file: %v", err)
 			//panic(err)
