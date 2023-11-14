@@ -561,9 +561,33 @@
             catch (e) {}
         }
     }
-    const channels=[];
-    var channelCount=0;
-    const uploaders=[];
+
+    const chPool={};
+    const fuPool = {};
+    function regUploader(url,fu) {
+        fu.channels = chPool[url]||(chPool[url]=[new Channel(url)]);
+        const uploaders = fuPool[url]||(fuPool[url]=[]);
+        uploaders.push(fu);
+        return [function () {
+            uploaders.splice(uploaders.indexOf(fu),1);
+            if(!uploaders.length){
+                let ch;
+                while ((ch=fu.channels.shift())){
+                    ch.close();
+                }
+            }
+        },function () {
+            for(var i=0,fi;i<uploaders.length;i++){
+                fi=uploaders[i];
+                if(fi===fu){
+                    continue;
+                }
+                fi.start();
+                break;
+            }
+        }]
+    }
+
     function FileUp(ele,option) {
         if(!ele instanceof HTMLElement){
             throw new Error('the fist argument must be HTMLElement');
@@ -582,11 +606,7 @@
             this.filesToHash.push(...files);
             this.start();
         }
-        if(channelCount===0){
-            channelCount=1;
-            channels.push(new Channel(option.uploadUrl));
-        }
-        uploaders.push(this);
+        [this.unreg,this.otherStart]=regUploader(option.uploadUrl,this);
         initWKBlob(option.worker,...option.deps||[])
             .then(wkBlob=>{
                 this.wkBlob=wkBlob;
@@ -607,18 +627,11 @@
     FileUp.prototype={
         start:function () {
             const opt = this.option;
-            this.startHash('SHA256',null,function () {
+            this.startHash('SHA256',null, () =>{
                 if(opt.onComplete instanceof Function){
                     opt.onComplete();
                 }
-                for(var i=0,fi;i<uploaders.length;i++){
-                    fi=uploaders[i];
-                    if(fi===this){
-                        continue;
-                    }
-                    fi.start();
-                    break;
-                }
+                this.otherStart();
             });
         },
         startHash:function (algo, worker, onComplete) {
@@ -656,31 +669,25 @@
             }
         },
         startUpload:function (onComplete) {
-            var channel=channels.shift();
+            var channel=this.channels.shift();
             if(channel){
                 var file = this.filesToUpload.shift();
                 if (!file) {
-                    channels.push(channel);
+                    this.channels.push(channel);
                     if(onComplete instanceof Function){
                         onComplete();
                     }
                     return;
                 }
                 doUpload(file,channel, (file,channel,err)=>{
-                    channels.push(channel);
+                    this.channels.push(channel);
                     this.startUpload(onComplete);
                     err&&console.error(err);
                 });
             }
         },
         dispose:function () {
-            uploaders.splice(uploaders.indexOf(this),1);
-            if(!uploaders.length){
-                var ch;
-                while ((ch=channels.shift())){
-                    ch.close();
-                }
-            }
+            this.unreg();
         }
     }
     exports.FileUp=FileUp;
