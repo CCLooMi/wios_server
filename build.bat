@@ -10,7 +10,6 @@ if not exist %cd%\dist\static\public\ md %cd%\dist\static\public\
 xcopy /Y /E %cd%\static\public %cd%\dist\static\public\
 
 echo build
-go build -o %cd%\dist\main.exe .\main
+go build -o %cd%\dist\wios_server.exe .\main
 
-echo=
-pause
+echo done
