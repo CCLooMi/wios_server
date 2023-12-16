@@ -1,5 +1,5 @@
-github.com/CCLooMi/sql-mak v0.0.0-20230728031221-f4d63b4031db h1:kJJlSoq0OQ1mT6ARMc3RkYFjpnnrbfuiWtccKhWHQNg=
-github.com/CCLooMi/sql-mak v0.0.0-20230728031221-f4d63b4031db/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
+github.com/CCLooMi/sql-mak v0.0.0-20231216051434-35d22b0b5735 h1:HqIjaLJupvUJZbQ0VfOd4VgIAFZBz1pgIcumUky4WVo=
+github.com/CCLooMi/sql-mak v0.0.0-20231216051434-35d22b0b5735/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=
 github.com/bytedance/sonic v1.9.1 h1:6iJ6NqdoxCDr6mbY8h18oSO+cShGSMRGCEo7F2h0x8s=
 github.com/bytedance/sonic v1.9.1/go.mod h1:i736AoUSYt75HyZLoJW9ERYxcy6eaN6h4BZXU064P/U=

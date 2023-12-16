@@ -3,11 +3,12 @@ module wios_server
 go 1.20
 
 require (
-	github.com/CCLooMi/sql-mak v0.0.0-20230728031221-f4d63b4031db
+	github.com/CCLooMi/sql-mak v0.0.0-20231216051434-35d22b0b5735
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/sirupsen/logrus v1.9.3
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -34,5 +35,4 @@ require (
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

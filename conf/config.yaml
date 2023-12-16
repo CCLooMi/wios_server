@@ -3,9 +3,9 @@ fileServer:
   path: /fileUp
   maxSize: 0
 db:
-  host: 127.0.0.1
+  host: gitea
   port: 3306
-  name: wpp_store
+  name: wios_server
   user: root
   password: apple
 log_level: debug

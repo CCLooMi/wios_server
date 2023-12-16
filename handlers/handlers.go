@@ -16,5 +16,6 @@ func RegisterHandlers(app *gin.Engine, db *sql.DB) {
 	ServerUploadFile(app, db)
 	NewUserController(app, db)
 	NewMenuController(app, db)
+	NewApiController(app, db)
 	ServerStaticDir(app)
 }
