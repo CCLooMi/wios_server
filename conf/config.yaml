@@ -8,5 +8,13 @@ db:
   name: wios_server
   user: root
   password: apple
-log_level: debug
+header:
+  Access-Control-Allow-Origin: "*"
+  Access-Control-Allow-Methods: "*"
+  Access-Control-Allow-Headers: "*"
+  Access-Control-Allow-Credentials: "true"
+log_level: info
 port: 4040
+enable_https: false
+https_cert_file: conf/cert/cert.pem
+https_key_file: conf/cert/key.pem

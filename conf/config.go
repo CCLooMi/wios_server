@@ -24,10 +24,14 @@ type DBConfig struct {
 
 // Config 包含应用程序的所有配置信息
 type Config struct {
-	FileServer FileServerConfig `yaml:"fileServer"`
-	DB         DBConfig         `yaml:"db"`
-	LogLevel   string           `yaml:"log_level"`
-	Port       int              `yaml:"port"`
+	FileServer  FileServerConfig  `yaml:"fileServer"`
+	DB          DBConfig          `yaml:"db"`
+	Header      map[string]string `yaml:"header"`
+	LogLevel    string            `yaml:"log_level"`
+	Port        string            `yaml:"port"`
+	EnableHttps bool              `yaml:"enable_https"`
+	CertFile    string            `yaml:"https_cert_file"`
+	KeyFile     string            `yaml:"https_key_file"`
 }
 
 func LoadConfig(configFile string) (*Config, error) {

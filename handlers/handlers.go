@@ -6,11 +6,8 @@ import (
 	"wios_server/middlewares"
 )
 
-// 注册路由
 func RegisterHandlers(app *gin.Engine, db *sql.DB) {
-	// 设置跨域请求的配置
-	app.Use(middlewares.SetHeaderCors)
-	app.Use(middlewares.LoggerRequestInfo)
+	app.Use(middlewares.ApplyConfig)
 	HandleWebSocket(app, db)
 	HandleFileUpload(app, db)
 	ServerUploadFile(app, db)
