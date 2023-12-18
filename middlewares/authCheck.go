@@ -3,9 +3,26 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"wios_server/utils"
 )
 
+type Auth struct {
+	Method  string
+	Group   string
+	Path    string
+	Auth    string
+	Handler func(c *gin.Context)
+}
+
+var AuthMap = make(map[string]*Auth)
+
 func AuthCheck(c *gin.Context) {
+	path := c.Request.URL.Path
+	auth := AuthMap[path]
+	if auth == nil || auth.Auth == "" {
+		c.Next()
+		return
+	}
 	// check CID value
 	cid, err := c.Cookie("CID")
 	if err != nil {
@@ -17,15 +34,16 @@ func AuthCheck(c *gin.Context) {
 	}
 
 	// get user info from redis by CID
-	userInfo := getUserInfoFromRedis(cid)
-	if userInfo == nil {
+	var userInfo map[string]string
+	err = utils.GetObjDataFromRedis(cid, &userInfo)
+	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "Unauthorized",
 		})
 		return
 	}
 
-	hasPermission := checkPermission(userInfo, c.Request.URL.Path)
+	hasPermission := checkPermission(&userInfo, path)
 	if !hasPermission {
 		// return 403
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
@@ -39,12 +57,8 @@ func AuthCheck(c *gin.Context) {
 
 	c.Next()
 }
-func getUserInfoFromRedis(cid string) (userInfo *map[string]interface{}) {
-	// get user info from redis
-	return nil
-}
 
 // checkPermission
-func checkPermission(userInfo *map[string]interface{}, path string) bool {
+func checkPermission(userInfo *map[string]string, path string) bool {
 	return true
 }

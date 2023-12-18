@@ -1,14 +1,13 @@
 package handlers
 
 import (
-	"database/sql"
 	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
-func HandleWebSocket(app *gin.Engine, db *sql.DB) {
+func HandleWebSocket(app *gin.Engine) {
 	app.GET("/ws", func(c *gin.Context) {
 		// 升级HTTP连接为WebSocket连接
 		upgrader := websocket.Upgrader{}

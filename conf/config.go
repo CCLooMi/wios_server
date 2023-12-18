@@ -1,6 +1,11 @@
 package conf
 
 import (
+	"context"
+	"database/sql"
+	"fmt"
+	"github.com/go-redis/redis/v8"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -16,9 +21,14 @@ type FileServerConfig struct {
 // DBConfig 包含 MySQL 数据库连接信息
 type DBConfig struct {
 	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
+	Port     string `yaml:"port"`
 	Name     string `yaml:"name"`
 	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+}
+type RedisConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
 	Password string `yaml:"password"`
 }
 
@@ -32,6 +42,7 @@ type Config struct {
 	EnableHttps bool              `yaml:"enable_https"`
 	CertFile    string            `yaml:"https_cert_file"`
 	KeyFile     string            `yaml:"https_key_file"`
+	Redis       RedisConfig       `yaml:"redis"`
 }
 
 func LoadConfig(configFile string) (*Config, error) {
@@ -50,6 +61,9 @@ func LoadConfig(configFile string) (*Config, error) {
 }
 
 var Cfg *Config
+var Db *sql.DB
+var Rdb *redis.Client
+var Ctx = context.Background()
 
 func init() {
 	cfgName := "config.yaml"
@@ -58,8 +72,26 @@ func init() {
 		config, err = LoadConfig(cfgName)
 		if err != nil {
 			logrus.Warnf("failed to load config file: %v", err)
-			//panic(err)
+			return
 		}
 	}
+	Db, Rdb = InitDB(config)
 	Cfg = config
+}
+
+func InitDB(config *Config) (*sql.DB, *redis.Client) {
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port, config.DB.Name)
+
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		panic(err)
+	}
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", config.Redis.Host, config.Redis.Port),
+		Password: config.Redis.Password,
+		DB:       0,
+	})
+	return db, rdb
 }

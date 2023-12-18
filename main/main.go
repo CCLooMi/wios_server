@@ -12,9 +12,9 @@ import (
 func main() {
 	setLog()
 	app := gin.Default()
-	db := InitDB(conf.Cfg)
-	defer db.Close()
-	handlers.RegisterHandlers(app, db)
+	defer conf.Db.Close()
+	defer conf.Rdb.Close()
+	handlers.RegisterHandlers(app)
 	startServer(app)
 }
 

@@ -27,7 +27,7 @@ func (dao *MenuService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQL
 
 func (dao *MenuService) SaveUpdate(menu *entity.Menu) sql.Result {
 	if menu.Id == nil {
-		menu.Id = utils.UUID()
+		*menu.Id = utils.UUID()
 	}
 	return dao.SaveOrUpdate(menu)
 }

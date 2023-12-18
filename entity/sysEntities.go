@@ -6,14 +6,14 @@ import (
 
 type Menu struct {
 	entity.IdEntity
-	Name     string     `orm:"varchar(64) comment '名称'" column:"name"`
-	URL      string     `orm:"varchar(256) comment '地址'" column:"url"`
-	Pid      *entity.ID `orm:"binary(16) comment '上级权限ID'" column:"pid"`
-	Icon     string     `orm:"longtext comment '图标'" column:"icon"`
-	Type     string     `orm:"varchar(16) comment '菜单类型'" column:"type"`
-	RootId   *entity.ID `orm:"binary(16) comment '根菜单ID'" column:"rootId"`
-	Idx      int        `orm:"int comment '层级深度'" column:"idx"`
-	Position int        `orm:"int comment '位置'" column:"position"`
+	Name     string `orm:"varchar(64) comment '名称'" column:"name"`
+	URL      string `orm:"varchar(256) comment '地址'" column:"url"`
+	Pid      string `orm:"varchar(32) comment '上级权限ID'" column:"pid"`
+	Icon     string `orm:"longtext comment '图标'" column:"icon"`
+	Type     string `orm:"varchar(16) comment '菜单类型'" column:"type"`
+	RootId   string `orm:"varchar(32) comment '根菜单ID'" column:"rootId"`
+	Idx      int    `orm:"int comment '层级深度'" column:"idx"`
+	Position int    `orm:"int comment '位置'" column:"position"`
 	entity.TimeEntity
 }
 
@@ -34,8 +34,8 @@ func (*Org) TableName() string {
 
 type OrgUser struct {
 	entity.IdEntity
-	UserID *entity.ID `orm:"binary(16) comment '用户ID'" column:"user_id"`
-	OrgID  *entity.ID `orm:"binary(16) comment '组织ID'" column:"org_id"`
+	UserID string `orm:"varchar(32) comment '用户ID'" column:"user_id"`
+	OrgID  string `orm:"varchar(32) comment '组织ID'" column:"org_id"`
 	entity.TimeEntity
 }
 
@@ -68,8 +68,8 @@ func (*Role) TableName() string {
 
 type RoleMenu struct {
 	entity.IdEntity
-	RoleId *entity.ID `orm:"binary(16) comment '角色ID'" column:"role_id"`
-	MenuId *entity.ID `orm:"binary(16) comment '视图ID'" column:"menu_id"`
+	RoleId string `orm:"varchar(32) comment '角色ID'" column:"role_id"`
+	MenuId string `orm:"varchar(32) comment '视图ID'" column:"menu_id"`
 	entity.TimeEntity
 }
 
@@ -79,8 +79,8 @@ func (*RoleMenu) TableName() string {
 
 type RolePermission struct {
 	entity.IdEntity
-	RoleId       *entity.ID `orm:"binary(16) comment '角色ID'" column:"role_id"`
-	PermissionId *entity.ID `orm:"binary(16) comment '权限ID'" column:"permission_id"`
+	RoleId       string `orm:"varchar(32) comment '角色ID'" column:"role_id"`
+	PermissionId string `orm:"varchar(32) comment '权限ID'" column:"permission_id"`
 	entity.TimeEntity
 }
 
@@ -90,8 +90,8 @@ func (*RolePermission) TableName() string {
 
 type RoleUser struct {
 	entity.IdEntity
-	UserId *entity.ID `orm:"binary(16) comment '用户ID'" column:"user_id"`
-	RoleId *entity.ID `orm:"binary(16) comment '角色ID'" column:"role_id"`
+	UserId string `orm:"varchar(32) comment '用户ID'" column:"user_id"`
+	RoleId string `orm:"varchar(32) comment '角色ID'" column:"role_id"`
 	entity.TimeEntity
 }
 
@@ -101,12 +101,12 @@ func (*RoleUser) TableName() string {
 
 type Upload struct {
 	entity.IdEntity
-	FileId   *entity.ID `orm:"varbinary(32) comment '文件ID'" column:"file_id"`
-	FileName string     `orm:"varchar(255) comment '文件名称'" column:"file_name"`
-	FileType string     `orm:"varchar(32) comment '文件类型'" column:"file_type"`
-	FileSize int64      `orm:"bigint comment '文件大小'" column:"file_size"`
-	BizId    *entity.ID `orm:"binary(16) comment '业务ID'" column:"biz_id"`
-	BizType  string     `orm:"varchar(255) comment '业务类型'" column:"biz_type"`
+	FileId   string `orm:"varchar(64) comment '文件ID'" column:"file_id"`
+	FileName string `orm:"varchar(255) comment '文件名称'" column:"file_name"`
+	FileType string `orm:"varchar(32) comment '文件类型'" column:"file_type"`
+	FileSize int64  `orm:"bigint comment '文件大小'" column:"file_size"`
+	BizId    string `orm:"varchar(32) comment '业务ID'" column:"biz_id"`
+	BizType  string `orm:"varchar(255) comment '业务类型'" column:"biz_type"`
 	entity.TimeEntity
 }
 
@@ -116,9 +116,9 @@ func (*Upload) TableName() string {
 
 type User struct {
 	entity.IdEntity
-	Username string     `orm:"varchar(64); not null comment '用户名'" column:"username"`
-	Password *entity.ID `orm:"varbinary(32); not null comment '用户密码'" column:"password"`
-	Seed     *entity.ID `orm:"binary(8); not null comment '密码种子'" column:"seed"`
+	Username string `orm:"varchar(64); not null comment '用户名'" column:"username"`
+	Password string `orm:"varchar(64); not null comment '用户密码'" column:"password"`
+	Seed     []byte `orm:"binary(8); not null comment '密码种子'" column:"seed"`
 	entity.TimeEntity
 }
 

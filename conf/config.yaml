@@ -8,6 +8,10 @@ db:
   name: wios_server
   user: root
   password: apple
+redis:
+  host: gitea
+  port: 6379
+  password: 123456
 header:
   Access-Control-Allow-Origin: "*"
   Access-Control-Allow-Methods: "*"

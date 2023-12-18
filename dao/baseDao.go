@@ -19,6 +19,10 @@ func NewBaseDao(db *sql.DB) *BaseDao {
 	return &BaseDao{db: db}
 }
 
+func (dao *BaseDao) FindBySM(sm *mak.SQLSM, out interface{}) {
+	sm.Execute(dao.db).ExtractorResultTo(out)
+}
+
 func (dao *BaseDao) ById(id interface{}, out interface{}) {
 	sm := mysql.SELECT("*").FROM(out, "e").WHERE("e.id = ?", id).LIMIT(1)
 	sm.Execute(dao.db).ExtractorResultTo(out)

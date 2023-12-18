@@ -27,10 +27,10 @@ func TestEntitiesToTable(t *testing.T) {
 		&entity.PurchasedWpp{},
 		&entity.Wpp{},
 		&entity.Api{})
-	db := InitDB(conf.Cfg)
-	defer db.Close()
 
-	r, err := db.Exec(sql)
+	defer conf.Db.Close()
+
+	r, err := conf.Db.Exec(sql)
 	if err != nil {
 		t.Error(err)
 	}

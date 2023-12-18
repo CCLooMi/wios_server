@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -19,7 +18,7 @@ func ServerStaticDir(app *gin.Engine) {
 	app.Static("/test", "./static/public/test")
 }
 
-func ServerUploadFile(app *gin.Engine, db *sql.DB) {
+func ServerUploadFile(app *gin.Engine) {
 	app.GET("/upload/:fileId", func(ctx *gin.Context) {
 		// 获取 fileId 参数
 		fileId := ctx.Param("fileId")

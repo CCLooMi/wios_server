@@ -1,18 +1,21 @@
 package handlers
 
 import (
-	"database/sql"
 	"github.com/gin-gonic/gin"
 	"wios_server/middlewares"
 )
 
-func RegisterHandlers(app *gin.Engine, db *sql.DB) {
-	app.Use(middlewares.ApplyConfig)
-	HandleWebSocket(app, db)
-	HandleFileUpload(app, db)
-	ServerUploadFile(app, db)
-	NewUserController(app, db)
-	NewMenuController(app, db)
-	NewApiController(app, db)
+func RegisterHandlers(app *gin.Engine) {
+	app.Use(middlewares.ApplyConfig, middlewares.AuthCheck)
+	HandleWebSocket(app)
+	HandleFileUpload(app)
+	ServerUploadFile(app)
+	NewUserController(app)
+	NewMenuController(app)
+	NewOrgController(app)
+	NewRoleController(app)
+	NewPermissionController(app)
+	NewUploadController(app)
+	NewApiController(app)
 	ServerStaticDir(app)
 }

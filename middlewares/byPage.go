@@ -11,7 +11,7 @@ func ByPage(ctx *gin.Context, f func(pageNumber int, pageSize int) (int64, any, 
 	pageSize, _ := strconv.Atoi(ctx.Query("pageSize"))
 	count, data, err := f(pageNumber, pageSize)
 	if err != nil {
-		msg.Error(ctx, err)
+		msg.Error(ctx, err.Error())
 		return
 	}
 	result := map[string]interface{}{

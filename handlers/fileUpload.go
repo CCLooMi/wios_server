@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -255,7 +254,7 @@ func NewBSet(fSize int64) []byte {
 	}
 }
 
-func HandleFileUpload(app *gin.Engine, db *sql.DB) {
+func HandleFileUpload(app *gin.Engine) {
 	path := conf.Cfg.FileServer.Path
 	app.GET(path, func(c *gin.Context) {
 		// 升级HTTP连接为WebSocket连接

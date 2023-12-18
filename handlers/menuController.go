@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"database/sql"
-	"strconv"
+	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
+	"wios_server/middlewares"
 	"wios_server/service"
 
 	"github.com/CCLooMi/sql-mak/mysql/mak"
@@ -15,34 +15,30 @@ type MenuController struct {
 	menuService *service.MenuService
 }
 
-func NewMenuController(app *gin.Engine, db *sql.DB) *MenuController {
-	ctrl := &MenuController{menuService: service.NewMenuService(db)}
+func NewMenuController(app *gin.Engine) *MenuController {
+	ctrl := &MenuController{menuService: service.NewMenuService(conf.Db)}
 	group := app.Group("/menu")
-	group.POST("/listByPage", ctrl.byPage)
-	group.POST("/saveUpdate", ctrl.saveUpdate)
-	group.POST("/delete", ctrl.delete)
+	hds := []middlewares.Auth{
+		{Method: "POST", Group: "/menu", Path: "/byPage", Auth: "menu.list", Handler: ctrl.byPage},
+		{Method: "POST", Group: "/menu", Path: "/saveUpdate", Auth: "menu.update", Handler: ctrl.saveUpdate},
+		{Method: "POST", Group: "/menu", Path: "/delete", Auth: "menu.delete", Handler: ctrl.delete},
+	}
+	for _, hd := range hds {
+		middlewares.AuthMap[hd.Group+hd.Path] = &hd
+		group.Handle(hd.Method, hd.Path, hd.Handler)
+	}
 	return ctrl
 }
 
 func (ctrl *MenuController) byPage(ctx *gin.Context) {
-	// 获取请求参数
-	pageNumber, _ := strconv.Atoi(ctx.Query("pageNumber"))
-	pageSize, _ := strconv.Atoi(ctx.Query("pageSize"))
-	count, menus, err := ctrl.menuService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
-		sm.SELECT("*").FROM(entity.Menu{}, "m")
+	middlewares.ByPage(ctx, func(pageNumber int, pageSize int) (int64, any, error) {
+		return ctrl.menuService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
+			sm.SELECT("*").FROM(entity.Menu{}, "m")
+		})
 	})
-	if err != nil {
-		panic(err)
-	}
-	result := map[string]interface{}{
-		"count": count,
-		"data":  menus,
-	}
-	msg.Ok(ctx, result)
 }
 
 func (ctrl *MenuController) saveUpdate(ctx *gin.Context) {
-	//获取post请求的json对象
 	var menu entity.Menu
 	if err := ctx.ShouldBindJSON(&menu); err != nil {
 		msg.Error(ctx, err.Error())

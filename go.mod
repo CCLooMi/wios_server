@@ -3,8 +3,9 @@ module wios_server
 go 1.20
 
 require (
-	github.com/CCLooMi/sql-mak v0.0.0-20231216051434-35d22b0b5735
+	github.com/CCLooMi/sql-mak v0.0.0-20231218053553-3cac62cd9b75
 	github.com/gin-gonic/gin v1.9.1
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/sirupsen/logrus v1.9.3
@@ -13,7 +14,9 @@ require (
 
 require (
 	github.com/bytedance/sonic v1.9.1 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
