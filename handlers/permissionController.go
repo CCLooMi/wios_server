@@ -22,8 +22,8 @@ func NewPermissionController(app *gin.Engine) *PermissionController {
 		{Method: "POST", Group: "/permission", Path: "/saveUpdate", Auth: "permission.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/permission", Path: "/delete", Auth: "permission.delete", Handler: ctrl.delete},
 	}
-	for _, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hd
+	for i, hd := range hds {
+		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl

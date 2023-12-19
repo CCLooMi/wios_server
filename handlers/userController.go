@@ -25,8 +25,8 @@ func NewUserController(app *gin.Engine) *UserController {
 		{Method: "POST", Group: "/user", Path: "/delete", Auth: "user.delete", Handler: ctrl.delete},
 		{Method: "POST", Group: "/user", Path: "/login", Handler: ctrl.login},
 	}
-	for _, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hd
+	for i, hd := range hds {
+		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl

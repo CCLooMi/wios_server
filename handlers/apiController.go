@@ -30,8 +30,8 @@ func NewApiController(app *gin.Engine) *ApiController {
 		{Method: "POST", Group: "/api", Path: "/saveUpdate", Auth: "api.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/api", Path: "/delete", Auth: "api.delete", Handler: ctrl.delete},
 	}
-	for _, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hd
+	for i, hd := range hds {
+		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl

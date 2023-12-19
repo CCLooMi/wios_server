@@ -22,8 +22,8 @@ func NewOrgController(app *gin.Engine) *OrgController {
 		{Method: "POST", Group: "/org", Path: "/saveUpdate", Auth: "org.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/org", Path: "/delete", Auth: "org.delete", Handler: ctrl.delete},
 	}
-	for _, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hd
+	for i, hd := range hds {
+		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl

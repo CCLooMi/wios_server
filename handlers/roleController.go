@@ -22,8 +22,8 @@ func NewRoleController(app *gin.Engine) *RoleController {
 		{Method: "POST", Group: "/role", Path: "/saveUpdate", Auth: "role.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/role", Path: "/delete", Auth: "role.delete", Handler: ctrl.delete},
 	}
-	for _, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hd
+	for i, hd := range hds {
+		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl
