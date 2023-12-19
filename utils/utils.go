@@ -55,6 +55,10 @@ func GetObjDataFromRedis(key string, out interface{}) error {
 	}
 	return json.Unmarshal([]byte(data), out)
 }
+
+func DelFromRedis(key string) {
+	conf.Rdb.Del(conf.Ctx, key)
+}
 func RandomBytes(len int) []byte {
 	b := make([]byte, len)
 	_, err := rand.Read(b)

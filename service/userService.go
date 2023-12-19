@@ -39,7 +39,7 @@ func (dao *UserService) SaveUpdate(user *entity.User) sql.Result {
 	return dao.SaveOrUpdate(user)
 }
 
-func (dao *UserService) FindByUsernameAndPassword(username string, password string) *entity.User {
+func (dao *UserService) FindByUsernameAndPassword(username string, password string) (*entity.User, *[]entity.Role, *[]entity.Permission) {
 	var user entity.User
 	sm := mysql.SELECT("*").
 		FROM(user, "u").
@@ -48,9 +48,23 @@ func (dao *UserService) FindByUsernameAndPassword(username string, password stri
 		LIMIT(1)
 	dao.FindBySM(sm, &user)
 	if user.Id == nil {
-		return nil
+		return nil, nil, nil
 	}
-	return &user
+	var roles []entity.Role
+	sm = mysql.SELECT("r.*").
+		FROM(entity.RoleUser{}, "ur").
+		LEFT_JOIN(entity.Role{}, "r", "ur.role_id = r.id").
+		WHERE("ur.user_id = ?", user.Id)
+	dao.FindBySM(sm, &roles)
+
+	var permissions []entity.Permission
+	sm = mysql.SELECT("p.*").
+		FROM(entity.RolePermission{}, "rp").
+		LEFT_JOIN(entity.Permission{}, "p", "rp.permission_id = p.id").
+		LEFT_JOIN(entity.RoleUser{}, "ru", "rp.role_id = ru.role_id").
+		WHERE("ru.user_id = ?", user.Id)
+	dao.FindBySM(sm, &permissions)
+	return &user, &roles, &permissions
 }
 
 func (dao *UserService) CheckExist(e *entity.User) bool {

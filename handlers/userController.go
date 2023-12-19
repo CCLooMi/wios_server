@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"time"
 	"wios_server/conf"
 	"wios_server/entity"
@@ -24,6 +25,7 @@ func NewUserController(app *gin.Engine) *UserController {
 		{Method: "POST", Group: "/user", Path: "/saveUpdate", Auth: "user.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/user", Path: "/delete", Auth: "user.delete", Handler: ctrl.delete},
 		{Method: "POST", Group: "/user", Path: "/login", Handler: ctrl.login},
+		{Method: "GET", Group: "/user", Path: "/current", Handler: ctrl.currentUser},
 	}
 	for i, hd := range hds {
 		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
@@ -92,18 +94,47 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	user := ctrl.userService.FindByUsernameAndPassword(userInfo["username"], userInfo["password"])
+	user, roles, permissions := ctrl.userService.FindByUsernameAndPassword(userInfo["username"], userInfo["password"])
 	if user == nil {
 		msg.Error(ctx, "username or password error")
 		return
 	}
-	CID := utils.GenerateRandomID()
+
+	CID, _ := ctx.Cookie("CID")
+	if CID != "" {
+		utils.DelFromRedis(CID)
+	}
+	CID = utils.GenerateRandomID()
 	maxAge := 60 * 60 * 24
 	ctx.SetCookie("CID", CID, maxAge, "/", "", false, true)
-	err := utils.SaveObjDataToRedis(CID, user, time.Hour*24)
+	infoMap := map[string]interface{}{
+		"user":        user,
+		"roles":       roles,
+		"permissions": permissions,
+	}
+	err := utils.SaveObjDataToRedis(CID, infoMap, time.Hour*24)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
 	msg.Ok(ctx, user)
+}
+
+func (ctrl *UserController) currentUser(ctx *gin.Context) {
+	CID, err := ctx.Cookie("CID")
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+	infoMap := make(map[string]interface{})
+	utils.GetObjDataFromRedis(CID, &infoMap)
+	if infoMap == nil {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+	msg.Ok(ctx, infoMap)
 }
