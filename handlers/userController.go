@@ -129,8 +129,8 @@ func (ctrl *UserController) currentUser(ctx *gin.Context) {
 		return
 	}
 	infoMap := make(map[string]interface{})
-	utils.GetObjDataFromRedis(CID, &infoMap)
-	if infoMap == nil {
+	err = utils.GetObjDataFromRedis(CID, &infoMap)
+	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "Unauthorized",
 		})

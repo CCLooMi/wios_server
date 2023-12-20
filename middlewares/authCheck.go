@@ -34,7 +34,7 @@ func AuthCheck(c *gin.Context) {
 	}
 
 	// get user info from redis by CID
-	var userInfo map[string]string
+	var userInfo map[string]interface{}
 	err = utils.GetObjDataFromRedis(cid, &userInfo)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -59,6 +59,6 @@ func AuthCheck(c *gin.Context) {
 }
 
 // checkPermission
-func checkPermission(userInfo *map[string]string, path string) bool {
+func checkPermission(userInfo *map[string]interface{}, path string) bool {
 	return true
 }
