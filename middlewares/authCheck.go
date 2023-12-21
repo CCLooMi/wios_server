@@ -3,6 +3,7 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"wios_server/entity"
 	"wios_server/utils"
 )
 
@@ -15,6 +16,12 @@ type Auth struct {
 }
 
 var AuthMap = make(map[string]*Auth)
+
+type UserInfo struct {
+	User        *entity.User        `json:"user"`
+	Roles       []entity.Role       `json:"roles"`
+	Permissions []entity.Permission `json:"permissions"`
+}
 
 func AuthCheck(c *gin.Context) {
 	path := c.Request.URL.Path
@@ -34,7 +41,7 @@ func AuthCheck(c *gin.Context) {
 	}
 
 	// get user info from redis by CID
-	var userInfo map[string]interface{}
+	var userInfo = UserInfo{}
 	err = utils.GetObjDataFromRedis(cid, &userInfo)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -43,22 +50,24 @@ func AuthCheck(c *gin.Context) {
 		return
 	}
 
-	hasPermission := checkPermission(&userInfo, path)
-	if !hasPermission {
-		// return 403
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-			"message": "Forbidden",
-		})
-		return
+	if auth.Auth != "#" && userInfo.User.Username != "root" {
+		hasPermission := checkPermission(&userInfo, path)
+		if !hasPermission {
+			// return 403
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"message": "Forbidden",
+			})
+			return
+		}
 	}
 
 	// save user info to context
-	c.Set("userInfo", userInfo)
+	c.Set("userInfo", &userInfo)
 
 	c.Next()
 }
 
 // checkPermission
-func checkPermission(userInfo *map[string]interface{}, path string) bool {
+func checkPermission(userInfo *UserInfo, path string) bool {
 	return true
 }

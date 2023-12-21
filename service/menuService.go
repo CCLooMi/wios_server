@@ -31,3 +31,7 @@ func (dao *MenuService) SaveUpdate(menu *entity.Menu) sql.Result {
 	}
 	return dao.SaveOrUpdate(menu)
 }
+
+func (dao *MenuService) BatchSaveUpdate(menus ...interface{}) []sql.Result {
+	return dao.BatchSaveOrUpdate(menus...)
+}

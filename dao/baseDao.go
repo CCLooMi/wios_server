@@ -39,6 +39,32 @@ func (dao *BaseDao) SaveOrUpdate(entity interface{}) sql.Result {
 	return im.Execute(dao.db).Update()
 }
 
+func (dao *BaseDao) BatchSaveOrUpdate(entities ...interface{}) []sql.Result {
+	if len(entities) == 0 {
+		return nil
+	}
+	entity := entities[0]
+	ei := utils.GetEntityInfo(entity)
+	im := mysql.INSERT_INTO(entity, ei.Columns...).ON_DUPLICATE_KEY_UPDATE()
+	for _, col := range ei.Columns {
+		if col != ei.PrimaryKey {
+			im.SET(col + "=?")
+		}
+	}
+	batchArgs := make([][]interface{}, 0)
+	for _, entity := range entities {
+		args := make([]interface{}, 0)
+		args = append(args, utils.GetFieldValue(entity, ei.CFMap[ei.PrimaryKey]))
+		for _, col := range ei.Columns {
+			if col != ei.PrimaryKey {
+				args = append(args, utils.GetFieldValue(entity, ei.CFMap[col]))
+			}
+		}
+		batchArgs = append(batchArgs, args, args)
+	}
+	im.BatchArgs(batchArgs...)
+	return im.Execute(dao.db).BatchUpdate()
+}
 func (dao *BaseDao) Update(entity interface{}) sql.Result {
 	ei := utils.GetEntityInfo(entity)
 	um := mysql.UPDATE(entity, "e")

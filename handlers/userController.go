@@ -25,7 +25,8 @@ func NewUserController(app *gin.Engine) *UserController {
 		{Method: "POST", Group: "/user", Path: "/saveUpdate", Auth: "user.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/user", Path: "/delete", Auth: "user.delete", Handler: ctrl.delete},
 		{Method: "POST", Group: "/user", Path: "/login", Handler: ctrl.login},
-		{Method: "GET", Group: "/user", Path: "/current", Handler: ctrl.currentUser},
+		{Method: "GET", Group: "/user", Path: "/current", Auth: "#", Handler: ctrl.currentUser},
+		{Method: "GET", Group: "/user", Path: "/logout", Auth: "#", Handler: ctrl.logout},
 	}
 	for i, hd := range hds {
 		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
@@ -137,4 +138,16 @@ func (ctrl *UserController) currentUser(ctx *gin.Context) {
 		return
 	}
 	msg.Ok(ctx, infoMap)
+}
+
+func (ctrl *UserController) logout(ctx *gin.Context) {
+	CID, err := ctx.Cookie("CID")
+	if err != nil || CID == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+	utils.DelFromRedis(CID)
+	msg.Ok(ctx, nil)
 }

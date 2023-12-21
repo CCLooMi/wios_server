@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/mitchellh/mapstructure"
 	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
@@ -22,6 +23,7 @@ func NewMenuController(app *gin.Engine) *MenuController {
 		{Method: "POST", Group: "/menu", Path: "/byPage", Auth: "menu.list", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/menu", Path: "/saveUpdate", Auth: "menu.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/menu", Path: "/delete", Auth: "menu.delete", Handler: ctrl.delete},
+		{Method: "POST", Group: "/menu", Path: "/init", Auth: "menu.init", Handler: ctrl.initMenus},
 	}
 	for i, hd := range hds {
 		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
@@ -74,4 +76,24 @@ func (ctrl *MenuController) delete(ctx *gin.Context) {
 		return
 	}
 	msg.Error(ctx, "delete failed")
+}
+
+func (ctrl *MenuController) initMenus(ctx *gin.Context) {
+	menuMap := []map[string]interface{}{
+		{"id": "237372500b86260b748e95143587c991", "rootId": "2a9533d1aba99986babeece48ef2c1bc", "pid": "2a9533d1aba99986babeece48ef2c1bc", "idx": 0, "name": "Menus", "href": "main.menus"},
+		{"id": "2a9533d1aba99986babeece48ef2c1bc", "rootId": "2a9533d1aba99986babeece48ef2c1bc", "pid": "#", "idx": 0, "name": "System", "href": ""},
+		{"id": "a658e46f2fe2699846bcf89053ae4001", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "#", "idx": 0, "name": "Security", "href": ""},
+		{"id": "f687ac08d79f2d066dd0d2d6058f7f01", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "a658e46f2fe2699846bcf89053ae4001", "idx": 0, "name": "Users", "href": "main.users"},
+		{"id": "f6b6af3a67dea5704da2a1150033063d", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "a658e46f2fe2699846bcf89053ae4001", "idx": 0, "name": "Roles", "href": "main.roles"}}
+	menus := make([]entity.Menu, 0)
+	err := mapstructure.Decode(menuMap, &menus)
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	interfaceMenus := make([]interface{}, len(menus))
+	for i, menu := range menus {
+		interfaceMenus[i] = menu
+	}
+	ctrl.menuService.BatchSaveUpdate(interfaceMenus...)
 }
