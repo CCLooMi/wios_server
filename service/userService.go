@@ -76,3 +76,20 @@ func (dao *UserService) CheckExist(e *entity.User) bool {
 	dao.FindBySM(sm, &user)
 	return user.Id != nil
 }
+
+func (dao *UserService) FindMenusByUser(user *entity.User) []entity.Menu {
+	var menus []entity.Menu
+	if user.Username == "root" {
+		sm := mysql.SELECT("m.*").
+			FROM(entity.Menu{}, "m")
+		dao.FindBySM(sm, &menus)
+		return menus
+	}
+	sm := mysql.SELECT("DISTINCT m.*").
+		FROM(entity.RoleMenu{}, "rm").
+		LEFT_JOIN(entity.Menu{}, "m", "rm.menu_id = m.id").
+		LEFT_JOIN(entity.RoleUser{}, "ru", "rm.role_id = ru.role_id").
+		WHERE("ru.user_id = ?", user.Id)
+	dao.FindBySM(sm, &menus)
+	return menus
+}

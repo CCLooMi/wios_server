@@ -7,7 +7,7 @@ import (
 type Menu struct {
 	entity.IdEntity
 	Name     string `orm:"varchar(64) comment '名称'" column:"name" json:"name"`
-	URL      string `orm:"varchar(256) comment '地址'" column:"url" json:"url"`
+	Href     string `orm:"varchar(256) comment '地址'" column:"href" json:"href"`
 	Pid      string `orm:"varchar(32) comment '上级权限ID'" column:"pid" json:"pid"`
 	Icon     string `orm:"longtext comment '图标'" column:"icon" json:"icon"`
 	Type     string `orm:"varchar(16) comment '菜单类型'" column:"type" json:"type"`

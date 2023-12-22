@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/mitchellh/mapstructure"
+	"encoding/json"
 	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
@@ -23,7 +23,7 @@ func NewMenuController(app *gin.Engine) *MenuController {
 		{Method: "POST", Group: "/menu", Path: "/byPage", Auth: "menu.list", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/menu", Path: "/saveUpdate", Auth: "menu.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/menu", Path: "/delete", Auth: "menu.delete", Handler: ctrl.delete},
-		{Method: "POST", Group: "/menu", Path: "/init", Auth: "menu.init", Handler: ctrl.initMenus},
+		{Method: "GET", Group: "/menu", Path: "/init", Auth: "menu.init", Handler: ctrl.initMenus},
 	}
 	for i, hd := range hds {
 		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
@@ -86,7 +86,12 @@ func (ctrl *MenuController) initMenus(ctx *gin.Context) {
 		{"id": "f687ac08d79f2d066dd0d2d6058f7f01", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "a658e46f2fe2699846bcf89053ae4001", "idx": 0, "name": "Users", "href": "main.users"},
 		{"id": "f6b6af3a67dea5704da2a1150033063d", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "a658e46f2fe2699846bcf89053ae4001", "idx": 0, "name": "Roles", "href": "main.roles"}}
 	menus := make([]entity.Menu, 0)
-	err := mapstructure.Decode(menuMap, &menus)
+	jsonStr, err := json.Marshal(menuMap)
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	err = json.Unmarshal(jsonStr, &menus)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return

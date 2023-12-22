@@ -45,12 +45,21 @@ func (dao *BaseDao) BatchSaveOrUpdate(entities ...interface{}) []sql.Result {
 	}
 	entity := entities[0]
 	ei := utils.GetEntityInfo(entity)
-	im := mysql.INSERT_INTO(entity, ei.Columns...).ON_DUPLICATE_KEY_UPDATE()
+	im := mysql.INSERT_INTO(entity).ON_DUPLICATE_KEY_UPDATE()
 	for _, col := range ei.Columns {
 		if col != ei.PrimaryKey {
+			if col == "insert_at" {
+				im.SET("insert_at=IF(IFNULL(insert_at), IFNULL(？,NOW()), insert_at)")
+				continue
+			}
+			if col == "update_at" {
+				im.SET("update_at=IFNULL(?, NOW())")
+				continue
+			}
 			im.SET(col + "=?")
 		}
 	}
+
 	batchArgs := make([][]interface{}, 0)
 	for _, entity := range entities {
 		args := make([]interface{}, 0)
@@ -60,7 +69,8 @@ func (dao *BaseDao) BatchSaveOrUpdate(entities ...interface{}) []sql.Result {
 				args = append(args, utils.GetFieldValue(entity, ei.CFMap[col]))
 			}
 		}
-		batchArgs = append(batchArgs, args, args)
+		args = append(args, args[1:]...)
+		batchArgs = append(batchArgs, args)
 	}
 	im.BatchArgs(batchArgs...)
 	return im.Execute(dao.db).BatchUpdate()

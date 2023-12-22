@@ -27,6 +27,7 @@ func NewUserController(app *gin.Engine) *UserController {
 		{Method: "POST", Group: "/user", Path: "/login", Handler: ctrl.login},
 		{Method: "GET", Group: "/user", Path: "/current", Auth: "#", Handler: ctrl.currentUser},
 		{Method: "GET", Group: "/user", Path: "/logout", Auth: "#", Handler: ctrl.logout},
+		{Method: "GET", Group: "/user", Path: "/menus", Auth: "#", Handler: ctrl.menus},
 	}
 	for i, hd := range hds {
 		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
@@ -122,22 +123,8 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 }
 
 func (ctrl *UserController) currentUser(ctx *gin.Context) {
-	CID, err := ctx.Cookie("CID")
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": "Unauthorized",
-		})
-		return
-	}
-	infoMap := make(map[string]interface{})
-	err = utils.GetObjDataFromRedis(CID, &infoMap)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": "Unauthorized",
-		})
-		return
-	}
-	msg.Ok(ctx, infoMap)
+	userInfo := ctx.MustGet("userInfo").(*middlewares.UserInfo)
+	msg.Ok(ctx, userInfo)
 }
 
 func (ctrl *UserController) logout(ctx *gin.Context) {
@@ -150,4 +137,10 @@ func (ctrl *UserController) logout(ctx *gin.Context) {
 	}
 	utils.DelFromRedis(CID)
 	msg.Ok(ctx, nil)
+}
+
+func (ctrl *UserController) menus(ctx *gin.Context) {
+	userInfo := ctx.MustGet("userInfo").(*middlewares.UserInfo)
+	menus := ctrl.userService.FindMenusByUser(userInfo.User)
+	msg.Ok(ctx, menus)
 }
