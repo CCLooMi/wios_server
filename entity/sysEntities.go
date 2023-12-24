@@ -117,6 +117,7 @@ func (*Upload) TableName() string {
 type User struct {
 	entity.IdEntity
 	Username string `orm:"varchar(64); not null comment '用户名'" column:"username" json:"username"`
+	Nickname string `orm:"varchar(64); not null comment '用户昵称'" column:"nickname" json:"nickname"`
 	Password string `orm:"varchar(64); not null comment '用户密码'" column:"password" json:"password"`
 	Seed     []byte `orm:"binary(8); not null comment '密码种子'" column:"seed" json:"seed"`
 	entity.TimeEntity

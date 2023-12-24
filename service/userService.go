@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql"
+	"wios_server/conf"
 	"wios_server/dao"
 	"wios_server/entity"
 	"wios_server/utils"
@@ -92,4 +93,17 @@ func (dao *UserService) FindMenusByUser(user *entity.User) []entity.Menu {
 		WHERE("ru.user_id = ?", user.Id)
 	dao.FindBySM(sm, &menus)
 	return menus
+}
+
+func (dao *UserService) DeleteUser(e *entity.User) []sql.Result {
+	tx, err := conf.Db.Begin()
+	if err != nil {
+		panic(err.Error())
+	}
+	dm := mysql.DELETE().FROM(entity.RoleUser{}).
+		WHERE("user_id = ?", e.Id)
+	dm2 := mysql.DELETE().FROM(entity.User{}).
+		WHERE("id = ?", e.Id)
+	rs := mysql.TxExecute(tx, dm, dm2)
+	return rs
 }

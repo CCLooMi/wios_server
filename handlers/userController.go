@@ -54,11 +54,11 @@ func (ctrl *UserController) saveUpdate(ctx *gin.Context) {
 			msg.Error(ctx, "username exists")
 			return
 		}
+	}
+	if user.Seed == nil {
 		user.Seed = utils.RandomBytes(8)
 		user.Password = utils.SHA256(user.Username, user.Password, user.Seed)
-		*user.InsertedAt = time.Now()
 	}
-	*user.UpdatedAt = time.Now()
 	var rs = ctrl.userService.SaveUpdate(&user)
 	affected, err := rs.RowsAffected()
 	if err != nil {
@@ -77,8 +77,8 @@ func (ctrl *UserController) delete(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	var rs = ctrl.userService.Delete(&user)
-	affected, err := rs.RowsAffected()
+	var rs = ctrl.userService.DeleteUser(&user)
+	affected, err := rs[1].RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
