@@ -65,8 +65,8 @@ func (ctrl *MenuController) delete(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	var rs = ctrl.menuService.Delete(&menu)
-	affected, err := rs.RowsAffected()
+	var rs = ctrl.menuService.DeleteMenu(&menu)
+	affected, err := (rs[1]).RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return

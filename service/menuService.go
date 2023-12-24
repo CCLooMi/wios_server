@@ -2,7 +2,9 @@ package service
 
 import (
 	"database/sql"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
+	"wios_server/conf"
 	"wios_server/dao"
 	"wios_server/entity"
 	"wios_server/utils"
@@ -24,7 +26,23 @@ func (dao *MenuService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQL
 	}
 	return count, menus, nil
 }
-
+func (dao *MenuService) DeleteMenu(menu *entity.Menu) []sql.Result {
+	// 开启事务
+	tx, err := conf.Db.Begin()
+	if err != nil {
+		panic(err.Error())
+	}
+	sm := mysql.SELECT("m.id").FROM(entity.Menu{}, "m").
+		WHERE("m.id = ?", menu.Id).
+		OR("m.pid = ?", menu.Id)
+	dm := mysql.DELETE().FROM(entity.RoleMenu{}).
+		WHERE_SUBQUERY("menu_id", mak.INValue, sm)
+	dm2 := mysql.DELETE().FROM(entity.Menu{}).
+		WHERE("id = ?", menu.Id).
+		OR("pid = ?", menu.Id)
+	rs := mysql.TxExecute(tx, dm, dm2)
+	return rs
+}
 func (dao *MenuService) SaveUpdate(menu *entity.Menu) sql.Result {
 	if menu.Id == nil {
 		*menu.Id = utils.UUID()

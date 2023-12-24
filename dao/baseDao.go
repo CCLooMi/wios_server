@@ -72,7 +72,7 @@ func (dao *BaseDao) BatchSaveOrUpdate(entities ...interface{}) []sql.Result {
 		args = append(args, args[1:]...)
 		batchArgs = append(batchArgs, args)
 	}
-	im.BatchArgs(batchArgs...)
+	im.SetBatchArgs(batchArgs...)
 	return im.Execute(dao.db).BatchUpdate()
 }
 func (dao *BaseDao) Update(entity interface{}) sql.Result {
@@ -89,7 +89,8 @@ func (dao *BaseDao) Update(entity interface{}) sql.Result {
 
 func (dao *BaseDao) Delete(entity interface{}) sql.Result {
 	ei := utils.GetEntityInfo(entity)
-	dm := mysql.DELETE().FROM(entity).WHERE(ei.PrimaryKey+" = ?", utils.GetFieldValue(entity, ei.CFMap[ei.PrimaryKey]))
+	dm := mysql.DELETE().FROM(entity).
+		WHERE(ei.PrimaryKey+" = ?", utils.GetFieldValue(entity, ei.CFMap[ei.PrimaryKey]))
 	return dm.Execute(dao.db).Update()
 }
 
