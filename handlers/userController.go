@@ -28,6 +28,9 @@ func NewUserController(app *gin.Engine) *UserController {
 		{Method: "GET", Group: "/user", Path: "/current", Auth: "#", Handler: ctrl.currentUser},
 		{Method: "GET", Group: "/user", Path: "/logout", Auth: "#", Handler: ctrl.logout},
 		{Method: "GET", Group: "/user", Path: "/menus", Auth: "#", Handler: ctrl.menus},
+		{Method: "GET", Group: "/user", Path: "/roles", Auth: "#", Handler: ctrl.roles},
+		{Method: "POST", Group: "/user", Path: "/addRole", Auth: "#", Handler: ctrl.addRole},
+		{Method: "POST", Group: "/user", Path: "/removeRole", Auth: "#", Handler: ctrl.removeRole},
 	}
 	for i, hd := range hds {
 		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
@@ -143,4 +146,48 @@ func (ctrl *UserController) menus(ctx *gin.Context) {
 	userInfo := ctx.MustGet("userInfo").(*middlewares.UserInfo)
 	menus := ctrl.userService.FindMenusByUser(userInfo.User)
 	msg.Ok(ctx, menus)
+}
+
+func (ctrl *UserController) roles(ctx *gin.Context) {
+	userInfo := ctx.MustGet("userInfo").(*middlewares.UserInfo)
+	roles := ctrl.userService.FindRolesByUser(userInfo.User)
+	msg.Ok(ctx, roles)
+}
+
+func (ctrl *UserController) addRole(ctx *gin.Context) {
+	var roleUser entity.RoleUser
+	if err := ctx.ShouldBindJSON(&roleUser); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	r := ctrl.userService.AddRole(&roleUser)
+	rows, err := r.RowsAffected()
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	if rows > 0 {
+		msg.Ok(ctx, &roleUser)
+		return
+	}
+	msg.Error(ctx, "save failed")
+}
+
+func (ctrl *UserController) removeRole(ctx *gin.Context) {
+	var roleUser entity.RoleUser
+	if err := ctx.ShouldBindJSON(&roleUser); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	r := ctrl.userService.RemoveRole(&roleUser)
+	rows, err := r.RowsAffected()
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	if rows > 0 {
+		msg.Ok(ctx, &roleUser)
+		return
+	}
+	msg.Error(ctx, "save failed")
 }

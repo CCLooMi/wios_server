@@ -58,6 +58,7 @@ func (*Permission) TableName() string {
 type Role struct {
 	entity.IdEntity
 	Name        string `orm:"varchar(64); not null comment '角色名称'" column:"name" json:"name"`
+	Code        string `orm:"varchar(64); not null comment '角色编码'" column:"code" json:"code"`
 	Description string `orm:"varchar(255) comment '角色描述'" column:"description" json:"description"`
 	entity.TimeEntity
 }
@@ -90,8 +91,8 @@ func (*RolePermission) TableName() string {
 
 type RoleUser struct {
 	entity.IdEntity
-	UserId string `orm:"varchar(32) comment '用户ID'" column:"user_id" json:"userId"`
-	RoleId string `orm:"varchar(32) comment '角色ID'" column:"role_id" json:"roleId"`
+	UserId *string `orm:"varchar(32) comment '用户ID'" column:"user_id" json:"userId"`
+	RoleId *string `orm:"varchar(32) comment '角色ID'" column:"role_id" json:"roleId"`
 	entity.TimeEntity
 }
 

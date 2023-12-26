@@ -107,3 +107,20 @@ func (dao *UserService) DeleteUser(e *entity.User) []sql.Result {
 	rs := mysql.TxExecute(tx, dm, dm2)
 	return rs
 }
+
+func (dao *UserService) FindRolesByUser(user *entity.User) []entity.Role {
+	var roles []entity.Role
+	sm := mysql.SELECT("DISTINCT r.*").
+		FROM(entity.RoleUser{}, "ru").
+		LEFT_JOIN(entity.Role{}, "r", "ru.role_id = r.id").
+		WHERE("ru.user_id = ?", user.Id)
+	dao.FindBySM(sm, &roles)
+	return roles
+}
+
+func (dao *UserService) AddRole(e *entity.RoleUser) sql.Result {
+	return dao.SaveOrUpdate(e)
+}
+func (dao *UserService) RemoveRole(e *entity.RoleUser) sql.Result {
+	return dao.Delete(e)
+}
