@@ -104,12 +104,18 @@ func (dao *RoleService) UpdateMenus(add []entity.RoleMenu, del []interface{}) []
 	}
 	batchArgs := make([][]interface{}, 0)
 	for _, v := range add {
-		batchArgs = append(batchArgs, []interface{}{v.Id, v.RoleId, v.MenuId})
+		batchArgs = append(batchArgs, []interface{}{v.Id, v.RoleId, v.MenuId, nil, nil})
 	}
-	dm := mysql.DELETE().FROM(entity.RoleMenu{}).
-		WHERE_IN("id", del...)
-	um := mysql.INSERT_INTO(entity.RoleMenu{}).
-		SetBatchArgs(batchArgs...)
-	rs := mysql.TxExecute(tx, dm, um)
+	a := make([]mak.SQLMak, 0)
+
+	if len(del) > 0 {
+		a = append(a, mysql.DELETE().FROM(entity.RoleMenu{}).
+			WHERE_IN("id", del...))
+	}
+	if len(batchArgs) > 0 {
+		a = append(a, mysql.INSERT_INTO(entity.RoleMenu{}).
+			SetBatchArgs(batchArgs...))
+	}
+	rs := mysql.TxExecute(tx, a...)
 	return rs
 }
