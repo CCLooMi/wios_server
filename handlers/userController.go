@@ -7,6 +7,7 @@ import (
 	"time"
 	"wios_server/conf"
 	"wios_server/entity"
+	"wios_server/handlers/beans"
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
 	"wios_server/service"
@@ -28,7 +29,7 @@ func NewUserController(app *gin.Engine) *UserController {
 		{Method: "GET", Group: "/user", Path: "/current", Auth: "#", Handler: ctrl.currentUser},
 		{Method: "GET", Group: "/user", Path: "/logout", Auth: "#", Handler: ctrl.logout},
 		{Method: "GET", Group: "/user", Path: "/menus", Auth: "#", Handler: ctrl.menus},
-		{Method: "GET", Group: "/user", Path: "/roles", Auth: "#", Handler: ctrl.roles},
+		{Method: "POST", Group: "/user", Path: "/roles", Auth: "#", Handler: ctrl.roles},
 		{Method: "POST", Group: "/user", Path: "/addRole", Auth: "#", Handler: ctrl.addRole},
 		{Method: "POST", Group: "/user", Path: "/removeRole", Auth: "#", Handler: ctrl.removeRole},
 	}
@@ -149,9 +150,13 @@ func (ctrl *UserController) menus(ctx *gin.Context) {
 }
 
 func (ctrl *UserController) roles(ctx *gin.Context) {
-	userInfo := ctx.MustGet("userInfo").(*middlewares.UserInfo)
-	roles := ctrl.userService.FindRolesByUser(userInfo.User)
-	msg.Ok(ctx, roles)
+	var pageInfo beans.PageInfo
+	if err := ctx.ShouldBindJSON(&pageInfo); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	data := ctrl.userService.FindRolesByUserId(pageInfo.Opts["userId"].(string), pageInfo.Page, pageInfo.PageSize, pageInfo.Opts["yes"].(bool))
+	msg.Ok(ctx, data)
 }
 
 func (ctrl *UserController) addRole(ctx *gin.Context) {

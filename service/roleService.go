@@ -69,9 +69,9 @@ func (dao *RoleService) FindUsersByRoleId(roleId string, pageNumber int, pageSiz
 			FROM(entity.User{}, "u").
 			LEFT_JOIN(entity.RoleUser{}, "ru", "ru.user_id = u.id")
 		if yes {
-			sm = sm.WHERE("ru.role_id = ?", roleId)
+			sm.WHERE("ru.role_id = ?", roleId)
 		} else {
-			sm = sm.WHERE("(ISNULL(ru.role_id) OR ru.role_id <> ?)", roleId)
+			sm.WHERE("(ISNULL(ru.role_id) OR ru.role_id <> ?)", roleId)
 		}
 	})
 	if err != nil {

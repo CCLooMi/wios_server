@@ -3,7 +3,7 @@ module wios_server
 go 1.20
 
 require (
-	github.com/CCLooMi/sql-mak v0.0.0-20231224020542-95d86ce88ca1
+	github.com/CCLooMi/sql-mak v0.0.0-20231226082414-0be6c102f030
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1

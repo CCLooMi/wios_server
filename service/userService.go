@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql"
+	"github.com/sirupsen/logrus"
 	"wios_server/conf"
 	"wios_server/dao"
 	"wios_server/entity"
@@ -107,15 +108,25 @@ func (dao *UserService) DeleteUser(e *entity.User) []sql.Result {
 	rs := mysql.TxExecute(tx, dm, dm2)
 	return rs
 }
-
-func (dao *UserService) FindRolesByUser(user *entity.User) []entity.Role {
+func (dao *UserService) FindRolesByUserId(userId string, page int, pageSize int, yes bool) map[string]interface{} {
 	var roles []entity.Role
-	sm := mysql.SELECT("DISTINCT r.*").
-		FROM(entity.RoleUser{}, "ru").
-		LEFT_JOIN(entity.Role{}, "r", "ru.role_id = r.id").
-		WHERE("ru.user_id = ?", user.Id)
-	dao.FindBySM(sm, &roles)
-	return roles
+	count, err := dao.ByPage(&roles, page, pageSize, func(sm *mak.SQLSM) {
+		sm.SELECT("DISTINCT r.*").
+			FROM(entity.Role{}, "r").
+			LEFT_JOIN(entity.RoleUser{}, "ru", "ru.role_id = r.id")
+		if yes {
+			sm.WHERE("ru.user_id = ?", userId)
+		} else {
+			sm.WHERE("(ISNULL(ru.user_id) OR ru.user_id <> ?)", userId)
+		}
+	})
+	if err != nil {
+		logrus.Warn(err.Error())
+	}
+	return map[string]interface{}{
+		"total": count,
+		"data":  roles,
+	}
 }
 
 func (dao *UserService) AddRole(e *entity.RoleUser) sql.Result {
