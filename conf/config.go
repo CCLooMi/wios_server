@@ -36,6 +36,7 @@ type RedisConfig struct {
 type Config struct {
 	FileServer  FileServerConfig  `yaml:"fileServer"`
 	DB          DBConfig          `yaml:"db"`
+	EnableCORS  bool              `yaml:"enable_cors"`
 	Header      map[string]string `yaml:"header"`
 	LogLevel    string            `yaml:"log_level"`
 	Port        string            `yaml:"port"`
