@@ -4,6 +4,8 @@ import (
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 	"wios_server/conf"
 	"wios_server/entity"
@@ -93,7 +95,10 @@ func (ctrl *UserController) delete(ctx *gin.Context) {
 	}
 	msg.Error(ctx, "delete failed")
 }
-
+func removePortFromDomain(domain string) string {
+	parts := strings.Split(domain, ":")
+	return parts[0]
+}
 func (ctrl *UserController) login(ctx *gin.Context) {
 	var userInfo map[string]string
 	if err := ctx.ShouldBindJSON(&userInfo); err != nil {
@@ -111,8 +116,18 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 		utils.DelFromRedis(CID)
 	}
 	CID = utils.GenerateRandomID()
+	domain := removePortFromDomain(ctx.Request.Host)
 	maxAge := 60 * 60 * 24
-	ctx.SetCookie("CID", CID, maxAge, "/", "", false, true)
+	http.SetCookie(ctx.Writer, &http.Cookie{
+		Name:     "CID",
+		Value:    url.QueryEscape(CID),
+		MaxAge:   maxAge,
+		Path:     "/",
+		Domain:   domain,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
+		HttpOnly: true,
+	})
 	infoMap := map[string]interface{}{
 		"user":        user,
 		"roles":       roles,
