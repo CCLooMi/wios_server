@@ -17,5 +17,6 @@ func RegisterHandlers(app *gin.Engine) {
 	NewPermissionController(app)
 	NewUploadController(app)
 	NewApiController(app)
+	CorsRevertServer(app)
 	ServerStaticDir(app)
 }

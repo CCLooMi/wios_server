@@ -31,19 +31,23 @@ type RedisConfig struct {
 	Port     string `yaml:"port"`
 	Password string `yaml:"password"`
 }
+type HostConf struct {
+	Header map[string]string `yaml:"header"`
+}
 
 // Config 包含应用程序的所有配置信息
 type Config struct {
-	FileServer  FileServerConfig  `yaml:"fileServer"`
-	DB          DBConfig          `yaml:"db"`
-	EnableCORS  bool              `yaml:"enable_cors"`
-	Header      map[string]string `yaml:"header"`
-	LogLevel    string            `yaml:"log_level"`
-	Port        string            `yaml:"port"`
-	EnableHttps bool              `yaml:"enable_https"`
-	CertFile    string            `yaml:"https_cert_file"`
-	KeyFile     string            `yaml:"https_key_file"`
-	Redis       RedisConfig       `yaml:"redis"`
+	FileServer  FileServerConfig    `yaml:"fileServer"`
+	DB          DBConfig            `yaml:"db"`
+	EnableCORS  bool                `yaml:"enable_cors"`
+	Header      map[string]string   `yaml:"header"`
+	LogLevel    string              `yaml:"log_level"`
+	Port        string              `yaml:"port"`
+	EnableHttps bool                `yaml:"enable_https"`
+	CertFile    string              `yaml:"https_cert_file"`
+	KeyFile     string              `yaml:"https_key_file"`
+	HostConf    map[string]HostConf `yaml:"host_conf"`
+	Redis       RedisConfig         `yaml:"redis"`
 }
 
 func LoadConfig(configFile string) (*Config, error) {
