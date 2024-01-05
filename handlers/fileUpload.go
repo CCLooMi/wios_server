@@ -38,7 +38,6 @@ var iSetMap = []byte{
 	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 7, 255}
-var cmdMap = make(map[int64]*UploadCommand)
 
 type FileInfo struct {
 	Id   string `json:"id"`
@@ -55,6 +54,7 @@ type FileAgent struct {
 	Complete  bool
 	Uploaded  int64
 	Uploader  map[int64]bool
+	cmdMap    map[uint64]*UploadCommand
 }
 type UploadCommand struct {
 	Id       []byte
@@ -66,6 +66,10 @@ type UploadCommand struct {
 }
 
 func (fa *FileAgent) NextCommand(cmd *UploadCommand) *FileAgent {
+	if fa.Complete {
+		//TODO
+		return fa
+	}
 	i := GetIStart(fa.BSet, fa.IStart)
 	fa.IStart = i + 1
 	cmd.Start = i * BlobSize
@@ -76,6 +80,7 @@ func (fa *FileAgent) NextCommand(cmd *UploadCommand) *FileAgent {
 	cmd.Uploaded = fa.Uploaded
 	cmd.Total = fa.Size
 	cmd.Idx = i
+	fa.cmdMap[uint64(cmd.Start)] = cmd
 	return fa
 }
 func (fa *FileAgent) CommandComplete(cmd *UploadCommand, data []byte) {
@@ -84,7 +89,7 @@ func (fa *FileAgent) CommandComplete(cmd *UploadCommand, data []byte) {
 	SetBSetPositionBit1(fa.BSet, cmd.Idx)
 	log.Println("Received file data:",
 		float64(fa.Uploaded)/float64(fa.Size)*100, "%")
-	if fa.Uploaded == fa.Size {
+	if fa.Uploaded >= fa.Size {
 		//rename file
 		fa.AgentFile.Close()
 		newName := filepath.Join(fa.BasePath, "0")
@@ -113,6 +118,15 @@ func (fa *FileAgent) LoadMetaData(metaData []byte) {
 }
 func (fa *FileAgent) hexId() string {
 	return hex.EncodeToString(fa.Id)
+}
+func (fa *FileAgent) Dispose() {
+	if len(fa.Uploader) == 0 {
+		if fa.AgentFile != nil {
+			fa.AgentFile.Close()
+		}
+		delete(agentMap, fa.hexId())
+	}
+	fa.SaveToMetaData()
 }
 func (cmd *UploadCommand) toBytes() []byte {
 	idLen := len(cmd.Id)
@@ -161,6 +175,7 @@ func NewFileAgen(fileInfo *FileInfo, basePath string, bid []byte) (*FileAgent, e
 			Complete:  false,
 			Uploaded:  0,
 			Uploader:  make(map[int64]bool),
+			cmdMap:    make(map[uint64]*UploadCommand),
 		}, nil
 	}
 	fa := &FileAgent{
@@ -169,20 +184,24 @@ func NewFileAgen(fileInfo *FileInfo, basePath string, bid []byte) (*FileAgent, e
 		AgentFile: agentFile,
 		Complete:  false,
 		Uploader:  make(map[int64]bool),
+		cmdMap:    make(map[uint64]*UploadCommand),
 	}
 	fa.LoadMetaData(metaData)
 	return fa, nil
+}
+func PushFinishedCmd(bid []byte, cnn *websocket.Conn) {
+	idLen := len(bid)
+	bb := make([]byte, 4+idLen)
+	binary.BigEndian.PutUint32(bb, uint32(idLen))
+	copy(bb[4:], bid)
+	pushBinMsg(bb, cnn)
 }
 func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
 	fid := fileInfo.Id
 	bid, _ := hex.DecodeString(fid)
 	basePath := path.Join(conf.Cfg.FileServer.SaveDir, utils.GetFPathByFid(fid))
 	if _, err := os.Stat(filepath.Join(basePath, "0")); err == nil {
-		idLen := len(bid)
-		bb := make([]byte, 4+idLen)
-		binary.BigEndian.PutUint32(bb, uint32(idLen))
-		copy(bb[4:], bid)
-		pushBinMsg(bb, cnn)
+		PushFinishedCmd(bid, cnn)
 		return
 	}
 	fa := agentMap[fid]
@@ -203,7 +222,6 @@ func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
 	agentMap[fid] = fa
 	cmd := &UploadCommand{Id: bid}
 	fa.NextCommand(cmd)
-	cmdMap[cnnAddress] = cmd
 	pushBinMsg(cmd.toBytes(), cnn)
 }
 func GetIStart(bSet []byte, iStart int64) int64 {
@@ -286,12 +304,14 @@ func HandleFileUpload(app *gin.Engine) {
 				err := json.Unmarshal(msg, &fileInfo)
 				if err != nil {
 					fmt.Println("Error:", err)
-					return
+					break
 				}
 				onStrMsg(&fileInfo, conn, address)
+				continue
 			}
 			if msgType == websocket.BinaryMessage {
-				onBinMsg(msg, conn, address)
+				onBinMsg(msg, conn)
+				continue
 			}
 		}
 	})
@@ -305,33 +325,30 @@ func onClose(cnn *websocket.Conn, cnnAddress int64) {
 	if fa != nil {
 		delete(fa.Uploader, cnnAddress)
 		delete(uploaderMap, cnnAddress)
-		if len(fa.Uploader) == 0 {
-			if fa.AgentFile != nil {
-				fa.AgentFile.Close()
-			}
-			delete(agentMap, fa.hexId())
-		}
-		fa.SaveToMetaData()
+		fa.Dispose()
 	}
-	//cancel command
-	delete(cmdMap, cnnAddress)
 }
 func onStrMsg(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
 	CheckExist(fileInfo, cnn, cnnAddress)
 }
-func onBinMsg(msg []byte, cnn *websocket.Conn, cnnAddress int64) {
-	bidLen := binary.BigEndian.Uint32(msg[:4])
-	bid := msg[4 : 4+bidLen]
+func onBinMsg(msg []byte, cnn *websocket.Conn) {
+	start := binary.BigEndian.Uint64(msg[:8])
+	bidLen := binary.BigEndian.Uint32(msg[8 : 8+4])
+	bid := msg[8+4 : 8+4+bidLen]
 	id := hex.EncodeToString(bid)
 	fa := agentMap[id]
-
-	cmd := cmdMap[cnnAddress]
-
+	if fa == nil {
+		return
+	}
+	cmd := fa.cmdMap[start]
 	if cmd == nil {
 		cmd = &UploadCommand{Id: bid}
-		cmdMap[cnnAddress] = cmd
 	} else {
-		fa.CommandComplete(cmd, msg[4+bidLen:])
+		fa.CommandComplete(cmd, msg[8+4+bidLen:])
+	}
+	if fa.Complete {
+		PushFinishedCmd(bid, cnn)
+		return
 	}
 	fa.NextCommand(cmd)
 	pushBinMsg(cmd.toBytes(), cnn)

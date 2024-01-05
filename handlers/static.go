@@ -11,33 +11,21 @@ import (
 )
 
 func ServerStaticDir(app *gin.Engine) {
-	//group := app.Group("/wios")
-	//group.GET("/index.html",xxxHandler)
-	// 映射静态文件目录
 	app.Static("/wios", "./static/public/wios")
 	app.Static("/test", "./static/public/test")
 }
 
 func ServerUploadFile(app *gin.Engine) {
 	app.GET("/upload/:fileId", func(ctx *gin.Context) {
-		// 获取 fileId 参数
 		fileId := ctx.Param("fileId")
-
-		// 计算文件路径
 		filePath := getRealPath(fileId)
-		//打印文件路径日志
-		fmt.Println(fmt.Sprintf(`filePath:%s`, filePath))
-
-		// 检查文件是否存在
+		// check if file exists
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			ctx.String(http.StatusNotFound, "File not found")
 			return
 		}
-
-		// 设置响应头
 		ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileId))
-
-		// 返回文件内容
+		// response file data
 		ctx.File(filePath)
 	})
 }
