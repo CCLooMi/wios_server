@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sync"
@@ -14,12 +15,6 @@ func CorsRevertServer(app *gin.Engine) {
 	proxyMap := make(map[string]*httputil.ReverseProxy)
 	var proxyMapMutex sync.Mutex
 	group.Use(func(c *gin.Context) {
-		for key, value := range conf.Cfg.Header {
-			c.Writer.Header().Set(key, value)
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Methods", c.Request.Method)
-		c.Writer.Header().Set("Access-Control-Allow-Origin", c.Request.Header.Get("Origin"))
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(200)
 			return
@@ -45,14 +40,21 @@ func CorsRevertServer(app *gin.Engine) {
 		proxy, ok := proxyMap[targetURL.String()]
 		if !ok {
 			proxy = httputil.NewSingleHostReverseProxy(proxyURL)
+			proxy.ModifyResponse = func(r *http.Response) error {
+				for key, value := range conf.Cfg.Header {
+					r.Header.Set(key, value)
+				}
+				r.Header.Set("Access-Control-Allow-Methods", c.Request.Method)
+				r.Header.Set("Access-Control-Allow-Origin", c.Request.Header.Get("Origin"))
+				hv := r.Header.Get("Access-Control-Allow-Credentials")
+				if len(hv) == 0 {
+					r.Header.Set("Access-Control-Allow-Credentials", "true")
+				}
+				return nil
+			}
 			proxyMap[targetURL.Host] = proxy
 		}
 		proxyMapMutex.Unlock()
-		for key, values := range c.Request.Header {
-			for _, value := range values {
-				c.Request.Header.Set(key, value)
-			}
-		}
 		c.Request.Host = targetURL.Host
 		c.Request.URL.Scheme = targetURL.Scheme
 		c.Request.URL.Path = targetURL.Path
