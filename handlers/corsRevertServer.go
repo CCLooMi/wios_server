@@ -16,6 +16,13 @@ func CorsRevertServer(app *gin.Engine) {
 	var proxyMapMutex sync.Mutex
 	group.Use(func(c *gin.Context) {
 		if c.Request.Method == "OPTIONS" {
+			hd := c.Writer.Header()
+			for key, value := range conf.Cfg.Header {
+				hd.Set(key, value)
+			}
+			hd.Set("Access-Control-Allow-Methods", c.Request.Method)
+			hd.Set("Access-Control-Allow-Origin", c.Request.Header.Get("Origin"))
+			hd.Set("Access-Control-Allow-Credentials", "true")
 			c.AbortWithStatus(200)
 			return
 		}
