@@ -104,7 +104,7 @@ type Upload struct {
 	entity.IdEntity
 	FileId   string `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
 	FileName string `orm:"varchar(255) comment '文件名称'" column:"file_name" json:"fileName"`
-	FileType string `orm:"varchar(32) comment '文件类型'" column:"file_type" json:"fileType"`
+	FileType string `orm:"varchar(64) comment '文件类型'" column:"file_type" json:"fileType"`
 	FileSize int64  `orm:"bigint comment '文件大小'" column:"file_size" json:"fileSize"`
 	BizId    string `orm:"varchar(32) comment '业务ID'" column:"biz_id" json:"bizId"`
 	BizType  string `orm:"varchar(255) comment '业务类型'" column:"biz_type" json:"bizType"`
@@ -130,11 +130,11 @@ func (*User) TableName() string {
 
 type Api struct {
 	entity.IdEntity
-	Desc     string `orm:"varchar(255) comment '接口描述'" column:"desc" json:"desc"`
-	Script   string `orm:"longtext comment '接口脚本'" column:"script" json:"script"`
-	Type     string `orm:"varchar(32) comment '接口类型'" column:"type" json:"type"`
-	Category string `orm:"varchar(32) comment '接口分类'" column:"category" json:"category"`
-	Status   string `orm:"varchar(32) comment '接口状态'" column:"status" json:"status"`
+	Desc     *string `orm:"varchar(255) comment '接口描述'" column:"desc" json:"desc"`
+	Script   *string `orm:"longtext comment '接口脚本'" column:"script" json:"script"`
+	Type     *string `orm:"varchar(32) comment '接口类型'" column:"type" json:"type"`
+	Category *string `orm:"varchar(32) comment '接口分类'" column:"category" json:"category"`
+	Status   *string `orm:"varchar(32) comment '接口状态'" column:"status" json:"status"`
 	entity.TimeEntity
 	entity.AuditEntity
 }

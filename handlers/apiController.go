@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
+	"github.com/robertkrimen/otto"
+	"time"
 	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
@@ -37,6 +40,87 @@ func NewApiController(app *gin.Engine) *ApiController {
 	return ctrl
 }
 
+type mySQLStruct struct {
+	SELECT        any
+	SELECT_EXP    any
+	SELECT_AS     any
+	SELECT_SM_AS  any
+	SELECT_EXP_AS any
+	INSERT_INTO   any
+	UPDATE        any
+	DELETE        any
+	TxExecute     any
+}
+
+var mysqlM = mySQLStruct{
+	mysql.SELECT,
+	mysql.SELECT_EXP,
+	mysql.SELECT_AS,
+	mysql.SELECT_SM_AS,
+	mysql.SELECT_EXP_AS,
+	mysql.INSERT_INTO,
+	mysql.UPDATE,
+	mysql.DELETE,
+	mysql.TxExecute,
+}
+var halt = errors.New("Stahp")
+
+func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any) {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start)
+		if caught := recover(); caught != nil {
+			if caught == halt {
+				msg.Error(c, "Some code took to long! Stopping after: "+duration.String())
+				return
+			}
+			// Something else happened, repanic!
+			panic(caught)
+		}
+	}()
+	vm := otto.New()
+	vm.Interrupt = make(chan func(), 1)
+	vm.Set("request", c)
+	vm.Set("msgOk", func(data any) {
+		msg.Ok(c, data)
+	})
+	vm.Set("msgError", func(err error) {
+		msg.Error(c, err)
+	})
+	vm.Set("msgOks", func(data ...any) {
+		msg.Oks(c, data...)
+	})
+	vm.Set("db", conf.Db)
+	vm.Set("rdb", conf.Rdb)
+	vm.Set("cfg", conf.Cfg)
+	vm.Set("sql", mysqlM)
+	vm.Set("args", args)
+	watchdogCleanup := make(chan struct{})
+	defer close(watchdogCleanup)
+	go func() {
+		select {
+		// Stop after timeout
+		case <-time.After(timeout * time.Second):
+			vm.Interrupt <- func() {
+				panic(halt)
+			}
+		case <-watchdogCleanup:
+		}
+		close(vm.Interrupt)
+	}()
+	result, err := vm.Run(unsafe)
+	if err != nil {
+		msg.Error(c, err)
+		return
+	}
+	if result.IsBoolean() {
+		b, _ := result.ToBoolean()
+		if !b {
+			return
+		}
+	}
+	msg.Ok(c, result)
+}
 func (ctrl *ApiController) execute(c *gin.Context) {
 	var reqBody ReqBody
 	if err := c.BindJSON(&reqBody); err != nil {
@@ -46,10 +130,12 @@ func (ctrl *ApiController) execute(c *gin.Context) {
 
 	api := &entity.Api{}
 	ctrl.apiService.ById(reqBody.ID, api)
-
-	fmt.Print(api)
+	if api.Id == nil {
+		msg.Error(c, "api not found")
+		return
+	}
+	runUnsafe(*api.Script, time.Duration(10), c, reqBody.Args)
 }
-
 func (ctrl *ApiController) byPage(c *gin.Context) {
 	middlewares.ByPage(c, func(pageNumber int, pageSize int) (int64, any, error) {
 		return ctrl.apiService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
