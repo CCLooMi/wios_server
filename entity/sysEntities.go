@@ -142,3 +142,15 @@ type Api struct {
 func (*Api) TableName() string {
 	return "sys_api"
 }
+
+type Config struct {
+	entity.IdEntity
+	Key      string `orm:"varchar(64); not null comment '配置key'" column:"key" json:"key"`
+	Category string `orm:"varchar(64) comment '配置分类'" column:"category" json:"category"`
+	Value    string `orm:"longtext comment '配置值'" column:"value" json:"value"`
+	entity.TimeEntity
+}
+
+func (*Config) TableName() string {
+	return "sys_config"
+}

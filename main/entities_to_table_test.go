@@ -5,7 +5,6 @@ import (
 	"github.com/CCLooMi/sql-mak/utils"
 	"strings"
 	"testing"
-	"wios_server/conf"
 	"wios_server/entity"
 )
 
@@ -26,15 +25,16 @@ func TestEntitiesToTable(t *testing.T) {
 		&entity.Comment{},
 		&entity.PurchasedWpp{},
 		&entity.Wpp{},
-		&entity.Api{})
-
-	defer conf.Db.Close()
-
-	r, err := conf.Db.Exec(sql)
-	if err != nil {
-		t.Error(err)
-	}
-	t.Log(r.RowsAffected())
+		&entity.Api{},
+		&entity.Config{})
+	t.Log(sql)
+	//defer conf.Db.Close()
+	//
+	//r, err := conf.Db.Exec(sql)
+	//if err != nil {
+	//	t.Error(err)
+	//}
+	//t.Log(r.RowsAffected())
 }
 func createTable(entities ...interface{}) string {
 	var sqlStatements []string
