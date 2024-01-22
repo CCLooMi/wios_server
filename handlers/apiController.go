@@ -112,7 +112,7 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 	}()
 	result, err := vm.Run(unsafe)
 	if err != nil {
-		msg.Error(c, err)
+		msg.Error(c, err.Error())
 		return
 	}
 	if result.IsBoolean() {
