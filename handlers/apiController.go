@@ -20,8 +20,9 @@ type ApiController struct {
 	apiService *service.ApiService
 }
 type ReqBody struct {
-	ID   string `json:"id"`
-	Args []any  `json:"args"`
+	ID     *string `json:"id"`
+	Script *string `json:"script"`
+	Args   []any   `json:"args"`
 }
 
 func NewApiController(app *gin.Engine) *ApiController {
@@ -29,6 +30,7 @@ func NewApiController(app *gin.Engine) *ApiController {
 	group := app.Group("/api")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/api", Path: "/execute", Auth: "api.execute", Handler: ctrl.execute},
+		{Method: "POST", Group: "/api", Path: "/executeById", Auth: "api.executeById", Handler: ctrl.executeById},
 		{Method: "POST", Group: "/api", Path: "/byPage", Auth: "api.list", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/api", Path: "/saveUpdate", Auth: "api.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/api", Path: "/delete", Auth: "api.delete", Handler: ctrl.delete},
@@ -122,6 +124,14 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 	msg.Ok(c, result)
 }
 func (ctrl *ApiController) execute(c *gin.Context) {
+	var reqBody ReqBody
+	if err := c.BindJSON(&reqBody); err != nil {
+		msg.Error(c, err)
+		return
+	}
+	runUnsafe(*reqBody.Script, time.Duration(10), c, reqBody.Args)
+}
+func (ctrl *ApiController) executeById(c *gin.Context) {
 	var reqBody ReqBody
 	if err := c.BindJSON(&reqBody); err != nil {
 		msg.Error(c, err)

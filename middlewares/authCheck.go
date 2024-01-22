@@ -3,6 +3,7 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strings"
 	"wios_server/entity"
 	"wios_server/utils"
 )
@@ -49,8 +50,15 @@ func AuthCheck(c *gin.Context) {
 		})
 		return
 	}
-
-	if auth.Auth != "#" && userInfo.User.Username != "root" {
+	if strings.HasPrefix(auth.Auth, "#") {
+		if auth.Auth != "#" && auth.Auth != ("#"+userInfo.User.Username) {
+			// return 403
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"message": "Forbidden",
+			})
+			return
+		}
+	} else if userInfo.User.Username != "root" {
 		hasPermission := checkPermission(&userInfo, path)
 		if !hasPermission {
 			// return 403
