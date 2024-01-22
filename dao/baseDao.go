@@ -51,6 +51,14 @@ func (dao *BaseDao) BatchSaveOrUpdate(entities ...interface{}) []sql.Result {
 	im := mysql.INSERT_INTO(entity).ON_DUPLICATE_KEY_UPDATE()
 	for _, col := range ei.Columns {
 		if col != ei.PrimaryKey {
+			if col == "inserted_at" {
+				im.SET("inserted_at=IF(IFNULL(inserted_at), IFNULL(？,NOW()), inserted_at)")
+				continue
+			}
+			if col == "updated_at" {
+				im.SET("updated_at=IFNULL(?, NOW())")
+				continue
+			}
 			if col == "insert_at" {
 				im.SET("insert_at=IF(IFNULL(insert_at), IFNULL(？,NOW()), insert_at)")
 				continue

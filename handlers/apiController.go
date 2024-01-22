@@ -160,6 +160,16 @@ func (ctrl *ApiController) saveUpdate(c *gin.Context) {
 		msg.Error(c, err)
 		return
 	}
+	userInfo, ok := c.Get("userInfo")
+	if !ok {
+		msg.Error(c, "userInfo not found")
+		return
+	}
+	userId := userInfo.(*middlewares.UserInfo).User.Id
+	api.UpdatedBy = userId
+	if api.CreatedBy == nil {
+		api.CreatedBy = userId
+	}
 	var rs = ctrl.apiService.SaveUpdate(&api)
 	affected, err := rs.RowsAffected()
 	if err != nil {
