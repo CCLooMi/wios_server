@@ -92,6 +92,26 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 	vm.Set("msgOks", func(data ...any) {
 		msg.Oks(c, data...)
 	})
+	vm.Set("byPage", func(f func(sm *mak.SQLSM)) {
+		middlewares.ByPage(c, func(pageNumber int, pageSize int) (int64, any, error) {
+			if pageNumber <= 0 {
+				pageNumber = 0
+			} else {
+				pageNumber = pageNumber - 1
+			}
+			if pageSize <= 0 {
+				pageSize = 20
+			}
+			sm := mak.NewSQLSM()
+			f(sm)
+			sm.LIMIT(pageNumber*pageSize, pageSize)
+			out := sm.Execute(conf.Db).GetResultAsMapList()
+			if pageNumber == 0 {
+				return sm.Execute(conf.Db).Count(), out, nil
+			}
+			return 0, out, nil
+		})
+	})
 	vm.Set("db", conf.Db)
 	vm.Set("rdb", conf.Rdb)
 	vm.Set("cfg", conf.Cfg)
