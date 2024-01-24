@@ -1,6 +1,8 @@
 package middlewares
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
@@ -9,11 +11,22 @@ import (
 )
 
 type Auth struct {
+	id      *string
 	Method  string
 	Group   string
 	Path    string
 	Auth    string
 	Handler func(c *gin.Context)
+}
+
+func (a *Auth) GetId() string {
+	if a.id != nil {
+		return *a.id
+	}
+	hash := md5.Sum([]byte(a.Method + a.Group + a.Path))
+	id := hex.EncodeToString(hash[:])
+	a.id = &id
+	return *a.id
 }
 
 var AuthMap = make(map[string]*Auth)

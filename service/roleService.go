@@ -33,7 +33,6 @@ func (dao *RoleService) SaveUpdate(role *entity.Role) sql.Result {
 	}
 	return dao.SaveOrUpdate(role)
 }
-
 func (dao *RoleService) DeleteRole(e *entity.Role) []sql.Result {
 	tx, err := conf.Db.Begin()
 	if err != nil {
@@ -50,7 +49,6 @@ func (dao *RoleService) DeleteRole(e *entity.Role) []sql.Result {
 	rs := mysql.TxExecute(tx, dm, dm2, dm3, dm4)
 	return rs
 }
-
 func (dao *RoleService) FindMenusByRole(e *entity.Role) []beans.MenuWithChecked {
 	sm := mysql.SELECT("m.*").
 		SELECT_AS("IF(rm.role_id,'on',NULL)", "checked").
@@ -60,7 +58,6 @@ func (dao *RoleService) FindMenusByRole(e *entity.Role) []beans.MenuWithChecked 
 	dao.FindBySM(sm, &menus)
 	return menus
 }
-
 func (dao *RoleService) FindUsersByRoleId(roleId string, pageNumber int, pageSize int, yes bool) map[string]interface{} {
 	var users []entity.User
 	//dao.FindBySM(sm, &users)
@@ -82,21 +79,18 @@ func (dao *RoleService) FindUsersByRoleId(roleId string, pageNumber int, pageSiz
 		"data":  users,
 	}
 }
-
 func (dao *RoleService) AddMenu(e *entity.RoleMenu) sql.Result {
 	return dao.SaveOrUpdate(e)
 }
 func (dao *RoleService) RemoveMenu(e *entity.RoleMenu) sql.Result {
 	return dao.Delete(e)
 }
-
 func (dao *RoleService) AddUser(e *entity.RoleUser) sql.Result {
 	return dao.SaveOrUpdate(e)
 }
 func (dao *RoleService) RemoveUser(e *entity.RoleUser) sql.Result {
 	return dao.Delete(e)
 }
-
 func (dao *RoleService) UpdateMenus(add []entity.RoleMenu, del []interface{}) []sql.Result {
 	tx, err := conf.Db.Begin()
 	if err != nil {
@@ -118,4 +112,16 @@ func (dao *RoleService) UpdateMenus(add []entity.RoleMenu, del []interface{}) []
 	}
 	rs := mysql.TxExecute(tx, a...)
 	return rs
+}
+func (dao *RoleService) FindPermissionsByRole(e *entity.Role) map[string]bool {
+	sm := mysql.SELECT("rp.permission_id").
+		FROM(entity.RolePermission{}, "rp").
+		WHERE("rp.role_id = ?", e.Id)
+	var ps []string
+	dao.FindBySM(sm, &ps)
+	psMap := make(map[string]bool)
+	for _, v := range ps {
+		psMap[v] = true
+	}
+	return psMap
 }

@@ -23,6 +23,7 @@ func NewRoleController(app *gin.Engine) *RoleController {
 		{Method: "POST", Group: "/role", Path: "/saveUpdate", Auth: "role.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/role", Path: "/delete", Auth: "role.delete", Handler: ctrl.delete},
 		{Method: "POST", Group: "/role", Path: "/menus", Auth: "role.menus", Handler: ctrl.menus},
+		{Method: "POST", Group: "/role", Path: "/permissions", Auth: "role.permissions", Handler: ctrl.permissions},
 		{Method: "POST", Group: "/role", Path: "/users", Auth: "role.users", Handler: ctrl.users},
 		{Method: "POST", Group: "/role", Path: "/addUser", Auth: "role.addUser", Handler: ctrl.addUser},
 		{Method: "POST", Group: "/role", Path: "/removeUser", Auth: "role.removeUser", Handler: ctrl.removeUser},
@@ -92,6 +93,26 @@ func (ctrl *RoleController) menus(ctx *gin.Context) {
 	msg.Ok(ctx, menus)
 }
 
+func (ctrl *RoleController) permissions(ctx *gin.Context) {
+	var role entity.Role
+	if err := ctx.ShouldBindJSON(&role); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	ps := make([]map[string]interface{}, 0)
+	pMap := ctrl.roleService.FindPermissionsByRole(&role)
+	for _, v := range middlewares.AuthMap {
+		ps = append(ps, map[string]interface{}{
+			"id":      v.GetId(),
+			"method":  v.Method,
+			"group":   v.Group,
+			"path":    v.Path,
+			"auth":    v.Auth,
+			"checked": pMap[v.GetId()],
+		})
+	}
+	msg.Ok(ctx, ps)
+}
 func (ctrl *RoleController) users(ctx *gin.Context) {
 	var pageInfo beans.PageInfo
 	if err := ctx.ShouldBindJSON(&pageInfo); err != nil {
