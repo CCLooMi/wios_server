@@ -32,9 +32,9 @@ func (a *Auth) GetId() string {
 var AuthMap = make(map[string]*Auth)
 
 type UserInfo struct {
-	User        *entity.User        `json:"user"`
-	Roles       []entity.Role       `json:"roles"`
-	Permissions []entity.Permission `json:"permissions"`
+	User        *entity.User  `json:"user"`
+	Roles       []entity.Role `json:"roles"`
+	Permissions []string      `json:"permissions"`
 }
 
 func AuthCheck(c *gin.Context) {

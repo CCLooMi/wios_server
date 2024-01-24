@@ -43,18 +43,6 @@ func (*OrgUser) TableName() string {
 	return "sys_org_user"
 }
 
-type Permission struct {
-	entity.IdEntity
-	Name        *string `orm:"varchar(64) not null comment '权限名称'" column:"name" json:"name"`
-	Type        *string `orm:"varchar(32) not null comment '权限类型'" column:"type" json:"type"`
-	Description *string `orm:"varchar(255) comment '权限描述'" column:"description" json:"description"`
-	entity.TimeEntity
-}
-
-func (*Permission) TableName() string {
-	return "sys_permission"
-}
-
 type Role struct {
 	entity.IdEntity
 	Name        *string `orm:"varchar(64); not null comment '角色名称'" column:"name" json:"name"`

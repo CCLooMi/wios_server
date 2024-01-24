@@ -14,7 +14,6 @@ func RegisterHandlers(app *gin.Engine) {
 	NewMenuController(app)
 	NewOrgController(app)
 	NewRoleController(app)
-	NewPermissionController(app)
 	NewUploadController(app)
 	NewApiController(app)
 	CorsRevertServer(app)
