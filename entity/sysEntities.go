@@ -69,7 +69,7 @@ func (*RoleMenu) TableName() string {
 type RolePermission struct {
 	entity.IdEntity
 	RoleId       *string `orm:"varchar(32) comment '角色ID'" column:"role_id" json:"roleId"`
-	PermissionId *string `orm:"varchar(32) comment '权限ID'" column:"permission_id" json:"permissionId"`
+	PermissionId *string `orm:"varchar(40) comment '权限ID'" column:"permission_id" json:"permissionId"`
 	entity.TimeEntity
 }
 

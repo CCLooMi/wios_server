@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"crypto/md5"
+	"crypto/sha1"
 	"encoding/hex"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -23,7 +23,7 @@ func (a *Auth) GetId() string {
 	if a.id != nil {
 		return *a.id
 	}
-	hash := md5.Sum([]byte(a.Method + a.Group + a.Path))
+	hash := sha1.Sum([]byte(a.Method + a.Group + a.Path))
 	id := hex.EncodeToString(hash[:])
 	a.id = &id
 	return *a.id

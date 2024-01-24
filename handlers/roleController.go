@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
 	"wios_server/conf"
@@ -30,6 +32,7 @@ func NewRoleController(app *gin.Engine) *RoleController {
 		{Method: "POST", Group: "/role", Path: "/addMenu", Auth: "role.addMenu", Handler: ctrl.addMenu},
 		{Method: "POST", Group: "/role", Path: "/removeMenu", Auth: "role.removeMenu", Handler: ctrl.removeMenu},
 		{Method: "POST", Group: "/role", Path: "/updateMenus", Auth: "role.updateMenus", Handler: ctrl.updateMenus},
+		{Method: "POST", Group: "/role", Path: "/updatePermissions", Auth: "role.updatePermissions", Handler: ctrl.updatePermissions},
 	}
 	for i, hd := range hds {
 		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
@@ -101,14 +104,34 @@ func (ctrl *RoleController) permissions(ctx *gin.Context) {
 	}
 	ps := make([]map[string]interface{}, 0)
 	pMap := ctrl.roleService.FindPermissionsByRole(&role)
+	gMap := make(map[string]map[string]interface{})
 	for _, v := range middlewares.AuthMap {
+		group := gMap[v.Group]
+		if group == nil {
+			hash := sha1.Sum([]byte(v.Method + v.Group))
+			id := hex.EncodeToString(hash[:])
+			checked := ""
+			if pMap[id] {
+				checked = "on"
+			}
+			gMap[v.Group] = map[string]interface{}{
+				"id":      id,
+				"name":    v.Group,
+				"checked": checked,
+			}
+			group = gMap[v.Group]
+			ps = append(ps, group)
+		}
+		checked := ""
+		if pMap[v.GetId()] {
+			checked = "on"
+		}
 		ps = append(ps, map[string]interface{}{
 			"id":      v.GetId(),
-			"method":  v.Method,
-			"group":   v.Group,
-			"path":    v.Path,
+			"pid":     group["id"],
+			"name":    v.Path,
 			"auth":    v.Auth,
-			"checked": pMap[v.GetId()],
+			"checked": checked,
 		})
 	}
 	msg.Ok(ctx, ps)
@@ -173,17 +196,41 @@ func (ctrl *RoleController) updateMenus(ctx *gin.Context) {
 		return
 	}
 	r := ctrl.roleService.UpdateMenus(updateMenus.Add, updateMenus.Del)
-	rows1, err := r[0].RowsAffected()
-	if err != nil {
+	var c int64 = 0
+	for _, v := range r {
+		cc, err := v.RowsAffected()
+		if err != nil {
+			msg.Error(ctx, err.Error())
+			return
+		}
+		c += cc
+	}
+	msg.Ok(ctx, c)
+}
+
+type UpdatePermissions struct {
+	Add []entity.RolePermission `json:"add"`
+	Del []interface{}           `json:"del"`
+}
+
+func (ctrl *RoleController) updatePermissions(ctx *gin.Context) {
+	var updatePermissions UpdatePermissions
+	if err := ctx.ShouldBindJSON(&updatePermissions); err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	rows2, err := r[1].RowsAffected()
-	if err != nil {
-		msg.Error(ctx, err.Error())
-		return
+	r := ctrl.roleService.UpdatePermissions(updatePermissions.Add, updatePermissions.Del)
+	var c int64 = 0
+	for _, v := range r {
+		cc, err := v.RowsAffected()
+		if err != nil {
+			msg.Error(ctx, err.Error())
+			return
+		}
+		c += cc
 	}
-	msg.Ok(ctx, rows1+rows2)
+	msg.Ok(ctx, c)
+
 }
 
 func (ctrl *RoleController) addUser(ctx *gin.Context) {

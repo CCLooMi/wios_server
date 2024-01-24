@@ -51,7 +51,7 @@ func (dao *RoleService) DeleteRole(e *entity.Role) []sql.Result {
 }
 func (dao *RoleService) FindMenusByRole(e *entity.Role) []beans.MenuWithChecked {
 	sm := mysql.SELECT("m.*").
-		SELECT_AS("IF(rm.role_id,'on',NULL)", "checked").
+		SELECT_AS("IF(rm.role_id IS NULL,'','on')", "checked").
 		FROM(entity.Menu{}, "m").
 		LEFT_JOIN(entity.RoleMenu{}, "rm", "(m.id = rm.menu_id AND rm.role_id = ?)", e.Id)
 	var menus []beans.MenuWithChecked
@@ -124,4 +124,26 @@ func (dao *RoleService) FindPermissionsByRole(e *entity.Role) map[string]bool {
 		psMap[v] = true
 	}
 	return psMap
+}
+
+func (dao *RoleService) UpdatePermissions(add []entity.RolePermission, del []interface{}) []sql.Result {
+	tx, err := conf.Db.Begin()
+	if err != nil {
+		panic(err.Error())
+	}
+	batchArgs := make([][]interface{}, 0)
+	for _, v := range add {
+		batchArgs = append(batchArgs, []interface{}{v.Id, v.RoleId, v.PermissionId, nil, nil})
+	}
+	a := make([]mak.SQLMak, 0)
+	if len(del) > 0 {
+		a = append(a, mysql.DELETE().FROM(entity.RolePermission{}).
+			WHERE_IN("id", del...))
+	}
+	if len(batchArgs) > 0 {
+		a = append(a, mysql.INSERT_INTO(entity.RolePermission{}).
+			SetBatchArgs(batchArgs...))
+	}
+	rs := mysql.TxExecute(tx, a...)
+	return rs
 }
