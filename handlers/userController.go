@@ -66,16 +66,12 @@ func (ctrl *UserController) saveUpdate(ctx *gin.Context) {
 		user.Password = utils.SHA256(user.Username, user.Password, user.Seed)
 	}
 	var rs = ctrl.userService.SaveUpdate(&user)
-	affected, err := rs.RowsAffected()
+	_, err := rs.RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	if affected > 0 {
-		msg.Ok(ctx, &user)
-		return
-	}
-	msg.Error(ctx, "save failed")
+	msg.Ok(ctx, &user)
 }
 func (ctrl *UserController) delete(ctx *gin.Context) {
 	var user entity.User

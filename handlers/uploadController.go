@@ -44,16 +44,12 @@ func (ctrl *UploadController) saveUpdate(ctx *gin.Context) {
 		return
 	}
 	var rs = ctrl.uploadService.SaveUpdate(&upload)
-	affected, err := rs.RowsAffected()
+	_, err := rs.RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	if affected > 0 {
-		msg.Ok(ctx, &upload)
-		return
-	}
-	msg.Error(ctx, "saveUpdate failed")
+	msg.Ok(ctx, &upload)
 }
 func (ctrl *UploadController) delete(ctx *gin.Context) {
 	var upload entity.Upload

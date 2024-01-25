@@ -55,16 +55,12 @@ func (ctrl *RoleController) saveUpdate(ctx *gin.Context) {
 		return
 	}
 	var rs = ctrl.roleService.SaveUpdate(&role)
-	affected, err := rs.RowsAffected()
+	_, err := rs.RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	if affected > 0 {
-		msg.Ok(ctx, &role)
-		return
-	}
-	msg.Error(ctx, "saveUpdate failed")
+	msg.Ok(ctx, &role)
 }
 
 func (ctrl *RoleController) delete(ctx *gin.Context) {

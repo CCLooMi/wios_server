@@ -47,16 +47,12 @@ func (ctrl *MenuController) saveUpdate(ctx *gin.Context) {
 		return
 	}
 	var rs = ctrl.menuService.SaveUpdate(&menu)
-	affected, err := rs.RowsAffected()
+	_, err := rs.RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	if affected > 0 {
-		msg.Ok(ctx, &menu)
-		return
-	}
-	msg.Error(ctx, "save failed")
+	msg.Ok(ctx, &menu)
 }
 
 func (ctrl *MenuController) delete(ctx *gin.Context) {

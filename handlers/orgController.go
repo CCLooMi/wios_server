@@ -44,16 +44,12 @@ func (ctrl *OrgController) saveUpdate(ctx *gin.Context) {
 		return
 	}
 	var rs = ctrl.orgService.SaveUpdate(&org)
-	affected, err := rs.RowsAffected()
+	_, err := rs.RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	if affected > 0 {
-		msg.Ok(ctx, &org)
-		return
-	}
-	msg.Error(ctx, "saveUpdate failed")
+	msg.Ok(ctx, &org)
 }
 
 func (ctrl *OrgController) delete(ctx *gin.Context) {

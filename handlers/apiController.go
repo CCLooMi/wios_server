@@ -65,6 +65,20 @@ var mysqlM = mySQLStruct{
 	mysql.DELETE,
 	mysql.TxExecute,
 }
+
+type makStruct struct {
+	Now    any
+	UUID   any
+	Exp    any
+	ExpStr any
+}
+
+var makM = makStruct{
+	mak.Now,
+	mak.UUID,
+	mak.Exp,
+	mak.ExpStr,
+}
 var halt = errors.New("Stahp")
 
 func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any) {
@@ -116,6 +130,7 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 	vm.Set("rdb", conf.Rdb)
 	vm.Set("cfg", conf.Cfg)
 	vm.Set("sql", mysqlM)
+	vm.Set("mak", makM)
 	vm.Set("args", args)
 	watchdogCleanup := make(chan struct{})
 	defer close(watchdogCleanup)
@@ -191,16 +206,12 @@ func (ctrl *ApiController) saveUpdate(c *gin.Context) {
 		api.CreatedBy = userId
 	}
 	var rs = ctrl.apiService.SaveUpdate(&api)
-	affected, err := rs.RowsAffected()
+	_, err := rs.RowsAffected()
 	if err != nil {
 		msg.Error(c, err)
 		return
 	}
-	if affected > 0 {
-		msg.Ok(c, &api)
-		return
-	}
-	msg.Error(c, "save failed")
+	msg.Ok(c, &api)
 }
 
 func (ctrl *ApiController) delete(c *gin.Context) {
