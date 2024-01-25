@@ -23,7 +23,7 @@ func NewConfigController(app *gin.Engine) *ConfigController {
 		{Method: "POST", Group: "/config", Path: "/delete", Auth: "config.delete", Handler: ctrl.delete},
 	}
 	for i, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
+		middlewares.RegisterAuth(&hds[i])
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl

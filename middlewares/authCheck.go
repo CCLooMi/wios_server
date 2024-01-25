@@ -29,17 +29,30 @@ func (a *Auth) GetId() string {
 	return *a.id
 }
 
-var AuthMap = make(map[string]*Auth)
+var authMap = make(map[string]*Auth)
+var AuthList = make([]*Auth, 0)
 
 type UserInfo struct {
-	User        *entity.User  `json:"user"`
-	Roles       []entity.Role `json:"roles"`
-	Permissions []string      `json:"permissions"`
+	User        *entity.User    `json:"user"`
+	Roles       []entity.Role   `json:"roles"`
+	Permissions map[string]bool `json:"permissions"`
 }
 
+func RegisterAuths(auths ...*Auth) {
+	for _, auth := range auths {
+		RegisterAuth(auth)
+	}
+}
+func RegisterAuth(auth *Auth) {
+	a := authMap[auth.GetId()]
+	if a == nil {
+		authMap[auth.Group+auth.Path] = auth
+		AuthList = append(AuthList, auth)
+	}
+}
 func AuthCheck(c *gin.Context) {
 	path := c.Request.URL.Path
-	auth := AuthMap[path]
+	auth := authMap[path]
 	if auth == nil || auth.Auth == "" {
 		c.Next()
 		return
@@ -72,7 +85,7 @@ func AuthCheck(c *gin.Context) {
 			return
 		}
 	} else if userInfo.User.Username != "root" {
-		hasPermission := checkPermission(&userInfo, path)
+		hasPermission := checkPermission(&userInfo, auth)
 		if !hasPermission {
 			// return 403
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
@@ -89,6 +102,6 @@ func AuthCheck(c *gin.Context) {
 }
 
 // checkPermission
-func checkPermission(userInfo *UserInfo, path string) bool {
-	return true
+func checkPermission(userInfo *UserInfo, auth *Auth) bool {
+	return userInfo.Permissions[auth.GetId()]
 }

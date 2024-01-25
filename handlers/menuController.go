@@ -26,7 +26,7 @@ func NewMenuController(app *gin.Engine) *MenuController {
 		{Method: "GET", Group: "/menu", Path: "/init", Auth: "menu.init", Handler: ctrl.initMenus},
 	}
 	for i, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
+		middlewares.RegisterAuth(&hds[i])
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl

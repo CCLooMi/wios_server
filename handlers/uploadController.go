@@ -23,7 +23,7 @@ func NewUploadController(app *gin.Engine) *UploadController {
 		{Method: "POST", Group: "/upload", Path: "/delete", Auth: "upload.delete", Handler: ctrl.delete},
 	}
 	for i, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
+		middlewares.RegisterAuth(&hds[i])
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl

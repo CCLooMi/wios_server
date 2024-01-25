@@ -36,7 +36,7 @@ func NewUserController(app *gin.Engine) *UserController {
 		{Method: "POST", Group: "/user", Path: "/removeRole", Auth: "#", Handler: ctrl.removeRole},
 	}
 	for i, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
+		middlewares.RegisterAuth(&hds[i])
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl
@@ -105,7 +105,7 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	user, roles, permissions := ctrl.userService.FindByUsernameAndPassword(userInfo["username"], userInfo["password"])
+	user, roles, pm := ctrl.userService.FindByUsernameAndPassword(userInfo["username"], userInfo["password"])
 	if user == nil {
 		msg.Error(ctx, "username or password error")
 		return
@@ -131,7 +131,7 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 	infoMap := map[string]interface{}{
 		"user":        user,
 		"roles":       roles,
-		"permissions": permissions,
+		"permissions": pm,
 	}
 	err := utils.SaveObjDataToRedis(CID, infoMap, time.Hour*24)
 	if err != nil {

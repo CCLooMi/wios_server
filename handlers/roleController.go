@@ -35,7 +35,7 @@ func NewRoleController(app *gin.Engine) *RoleController {
 		{Method: "POST", Group: "/role", Path: "/updatePermissions", Auth: "role.updatePermissions", Handler: ctrl.updatePermissions},
 	}
 	for i, hd := range hds {
-		middlewares.AuthMap[hd.Group+hd.Path] = &hds[i]
+		middlewares.RegisterAuth(&hds[i])
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
 	return ctrl
@@ -105,7 +105,7 @@ func (ctrl *RoleController) permissions(ctx *gin.Context) {
 	ps := make([]map[string]interface{}, 0)
 	pMap := ctrl.roleService.FindPermissionsByRole(&role)
 	gMap := make(map[string]map[string]interface{})
-	for _, v := range middlewares.AuthMap {
+	for _, v := range middlewares.AuthList {
 		group := gMap[v.Group]
 		if group == nil {
 			hash := sha1.Sum([]byte(v.Method + v.Group))
