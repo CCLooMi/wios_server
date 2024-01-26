@@ -66,14 +66,14 @@ var mysqlM = mySQLStruct{
 	mysql.TxExecute,
 }
 
-type makStruct struct {
+type expStruct struct {
 	Now    any
 	UUID   any
 	Exp    any
 	ExpStr any
 }
 
-var makM = makStruct{
+var expM = expStruct{
 	mak.Now,
 	mak.UUID,
 	mak.Exp,
@@ -130,7 +130,7 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 	vm.Set("rdb", conf.Rdb)
 	vm.Set("cfg", conf.Cfg)
 	vm.Set("sql", mysqlM)
-	vm.Set("mak", makM)
+	vm.Set("exp", expM)
 	vm.Set("args", args)
 	watchdogCleanup := make(chan struct{})
 	defer close(watchdogCleanup)
