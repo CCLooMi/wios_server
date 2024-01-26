@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
 	"github.com/robertkrimen/otto"
+	"io"
+	"net/http"
 	"time"
 	"wios_server/conf"
 	"wios_server/entity"
@@ -132,6 +135,7 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 	vm.Set("sql", mysqlM)
 	vm.Set("exp", expM)
 	vm.Set("args", args)
+	vm.Set("fetch", fetch)
 	watchdogCleanup := make(chan struct{})
 	defer close(watchdogCleanup)
 	go func() {
@@ -157,6 +161,52 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 		}
 	}
 	msg.Ok(c, result)
+}
+func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
+	var opts map[string]interface{}
+	if len(o) > 0 {
+		opts = o[0].(map[string]interface{})
+	} else {
+		opts = map[string]interface{}{}
+	}
+	method, methodExists := opts["method"].(string)
+	if !methodExists || method == "" {
+		method = "GET"
+	}
+	var body string
+	if bodyInterface, bodyExists := opts["body"]; bodyExists {
+		body = bodyInterface.(string)
+	}
+	req, err := http.NewRequest(method, url, bytes.NewBufferString(body))
+	if err != nil {
+		return nil, err
+	}
+	headers, headersExist := opts["headers"].(map[string]interface{})
+	if headersExist {
+		for k, v := range headers {
+			req.Header.Set(k, v.(string))
+		}
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	rspBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"Response":   string(rspBody),
+		"Request":    resp.Request,
+		"Status":     resp.Status,
+		"StatusCode": resp.StatusCode,
+		"Header":     resp.Header,
+		"Cookies": func() []*http.Cookie {
+			return resp.Cookies()
+		},
+	}, nil
 }
 func (ctrl *ApiController) execute(c *gin.Context) {
 	var reqBody ReqBody
