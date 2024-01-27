@@ -133,9 +133,8 @@ func (*Api) TableName() string {
 
 type Config struct {
 	entity.IdEntity
-	Name     string `orm:"varchar(64); not null comment '配置名称'" column:"name" json:"name"`
-	Category string `orm:"varchar(64) comment '配置分类'" column:"category" json:"category"`
-	Value    string `orm:"longtext comment '配置值'" column:"value" json:"value"`
+	Name  string `orm:"varchar(64); not null comment '配置名称'" column:"name" json:"name"`
+	Value string `orm:"longtext comment '配置值'" column:"value" json:"value"`
 	entity.TimeEntity
 }
 
