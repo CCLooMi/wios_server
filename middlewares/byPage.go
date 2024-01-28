@@ -13,9 +13,12 @@ type Page struct {
 
 func ByPage(c *gin.Context, f func(page *Page) (int64, any, error)) {
 	var page Page
-	if err := c.BindJSON(&page); err != nil {
-		msg.Error(c, err)
-		return
+	if err := c.ShouldBindJSON(&page); err != nil {
+		page = Page{
+			PageNumber: 1,
+			PageSize:   20,
+			Opts:       map[string]interface{}{},
+		}
 	}
 	if page.PageNumber <= 0 {
 		page.PageNumber = 0
