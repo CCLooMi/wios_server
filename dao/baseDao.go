@@ -36,7 +36,16 @@ func (dao *BaseDao) SaveOrUpdate(entity interface{}) sql.Result {
 	im := mysql.INSERT_INTO(entity).ON_DUPLICATE_KEY_UPDATE()
 	for _, col := range ei.Columns {
 		if col != ei.PrimaryKey {
-			im.SET("`"+col+"`=?", utils.GetFieldValue(entity, ei.CFMap[col]))
+			v := utils.GetFieldValue(entity, ei.CFMap[col])
+			if col == "inserted_at" {
+				im.SET("inserted_at=COALESCE(?,inserted_at,NOW())", v)
+				continue
+			}
+			if col == "updated_at" {
+				im.SET("updated_at=IFNULL(?, NOW())", v)
+				continue
+			}
+			im.SET("`"+col+"`=?", v)
 		}
 	}
 	return im.Execute(dao.db).Update()
@@ -52,19 +61,11 @@ func (dao *BaseDao) BatchSaveOrUpdate(entities ...interface{}) []sql.Result {
 	for _, col := range ei.Columns {
 		if col != ei.PrimaryKey {
 			if col == "inserted_at" {
-				im.SET("inserted_at=IF(IFNULL(inserted_at), IFNULL(？,NOW()), inserted_at)")
+				im.SET("inserted_at=COALESCE(?,inserted_at,NOW())")
 				continue
 			}
 			if col == "updated_at" {
 				im.SET("updated_at=IFNULL(?, NOW())")
-				continue
-			}
-			if col == "insert_at" {
-				im.SET("insert_at=IF(IFNULL(insert_at), IFNULL(？,NOW()), insert_at)")
-				continue
-			}
-			if col == "update_at" {
-				im.SET("update_at=IFNULL(?, NOW())")
 				continue
 			}
 			im.SET("`" + col + "`=?")
