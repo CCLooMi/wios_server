@@ -67,7 +67,7 @@ func (dao *BaseDao) BatchSaveOrUpdate(entities ...interface{}) []sql.Result {
 				im.SET("update_at=IFNULL(?, NOW())")
 				continue
 			}
-			im.SET(col + "=?")
+			im.SET("`" + col + "`=?")
 		}
 	}
 

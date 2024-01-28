@@ -29,3 +29,14 @@ func (dao *ApiService) SaveUpdate(api *entity.Api) sql.Result {
 	}
 	return dao.SaveOrUpdate(api)
 }
+
+func (dao *ApiService) SaveUpdates(apis []entity.Api) []sql.Result {
+	list := make([]interface{}, len(apis))
+	for i := 0; i < len(apis); i++ {
+		if apis[i].Id == nil {
+			*apis[i].Id = utils.UUID()
+		}
+		list[i] = &apis[i]
+	}
+	return dao.BatchSaveOrUpdate(list...)
+}

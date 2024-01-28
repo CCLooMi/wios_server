@@ -35,7 +35,8 @@ func NewApiController(app *gin.Engine) *ApiController {
 		{Method: "POST", Group: "/api", Path: "/execute", Auth: "api.execute", Handler: ctrl.execute},
 		{Method: "POST", Group: "/api", Path: "/executeById", Auth: "api.executeById", Handler: ctrl.executeById},
 		{Method: "POST", Group: "/api", Path: "/byPage", Auth: "api.list", Handler: ctrl.byPage},
-		{Method: "POST", Group: "/api", Path: "/saveUpdate", Auth: "api.update", Handler: ctrl.saveUpdate},
+		{Method: "POST", Group: "/api", Path: "/saveUpdate", Auth: "api.saveUpdate", Handler: ctrl.saveUpdate},
+		{Method: "POST", Group: "/api", Path: "/saveUpdates", Auth: "api.saveUpdates", Handler: ctrl.saveUpdates},
 		{Method: "POST", Group: "/api", Path: "/delete", Auth: "api.delete", Handler: ctrl.delete},
 	}
 	for i, hd := range hds {
@@ -262,6 +263,34 @@ func (ctrl *ApiController) saveUpdate(c *gin.Context) {
 		return
 	}
 	msg.Ok(c, &api)
+}
+func (ctrl *ApiController) saveUpdates(c *gin.Context) {
+	var apis []entity.Api
+	if err := c.ShouldBindJSON(&apis); err != nil {
+		msg.Error(c, err)
+		return
+	}
+	userInfo, ok := c.Get("userInfo")
+	if !ok {
+		msg.Error(c, "userInfo not found")
+		return
+	}
+	userId := userInfo.(*middlewares.UserInfo).User.Id
+	for i := 0; i < len(apis); i++ {
+		apis[i].UpdatedBy = userId
+		if apis[i].CreatedBy == nil {
+			apis[i].CreatedBy = userId
+		}
+	}
+	var rs = ctrl.apiService.SaveUpdates(apis)
+	for _, r := range rs {
+		_, err := r.RowsAffected()
+		if err != nil {
+			msg.Error(c, err)
+			return
+		}
+	}
+	msg.Ok(c, &apis)
 }
 
 func (ctrl *ApiController) delete(c *gin.Context) {
