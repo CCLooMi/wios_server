@@ -42,8 +42,8 @@ func NewUserController(app *gin.Engine) *UserController {
 	return ctrl
 }
 func (ctrl *UserController) byPage(ctx *gin.Context) {
-	middlewares.ByPage(ctx, func(pageNumber int, pageSize int) (int64, any, error) {
-		return ctrl.userService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
+	middlewares.ByPage(ctx, func(page *middlewares.Page) (int64, any, error) {
+		return ctrl.userService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
 			sm.SELECT("*").FROM(entity.User{}, "u")
 		})
 	})

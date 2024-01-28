@@ -30,8 +30,8 @@ func NewOrgController(app *gin.Engine) *OrgController {
 }
 
 func (ctrl *OrgController) byPage(ctx *gin.Context) {
-	middlewares.ByPage(ctx, func(pageNumber int, pageSize int) (int64, any, error) {
-		return ctrl.orgService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
+	middlewares.ByPage(ctx, func(page *middlewares.Page) (int64, any, error) {
+		return ctrl.orgService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
 			sm.SELECT("*").FROM(entity.Org{}, "o")
 		})
 	})

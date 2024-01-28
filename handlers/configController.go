@@ -29,8 +29,8 @@ func NewConfigController(app *gin.Engine) *ConfigController {
 	return ctrl
 }
 func (ctrl *ConfigController) byPage(ctx *gin.Context) {
-	middlewares.ByPage(ctx, func(pageNumber int, pageSize int) (int64, any, error) {
-		return ctrl.configService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
+	middlewares.ByPage(ctx, func(page *middlewares.Page) (int64, any, error) {
+		return ctrl.configService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
 			sm.SELECT("*").FROM(entity.Config{}, "c")
 		})
 	})

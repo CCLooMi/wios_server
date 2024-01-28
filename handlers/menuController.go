@@ -33,8 +33,8 @@ func NewMenuController(app *gin.Engine) *MenuController {
 }
 
 func (ctrl *MenuController) byPage(ctx *gin.Context) {
-	middlewares.ByPage(ctx, func(pageNumber int, pageSize int) (int64, any, error) {
-		return ctrl.menuService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
+	middlewares.ByPage(ctx, func(page *middlewares.Page) (int64, any, error) {
+		return ctrl.menuService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
 			sm.SELECT("*").FROM(entity.Menu{}, "m")
 		})
 	})

@@ -41,8 +41,8 @@ func NewRoleController(app *gin.Engine) *RoleController {
 	return ctrl
 }
 func (ctrl *RoleController) byPage(ctx *gin.Context) {
-	middlewares.ByPage(ctx, func(pageNumber int, pageSize int) (int64, any, error) {
-		return ctrl.roleService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
+	middlewares.ByPage(ctx, func(page *middlewares.Page) (int64, any, error) {
+		return ctrl.roleService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
 			sm.SELECT("*").FROM(entity.Role{}, "r")
 		})
 	})

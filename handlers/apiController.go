@@ -111,20 +111,12 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 		msg.Oks(c, data...)
 	})
 	vm.Set("byPage", func(f func(sm *mak.SQLSM)) {
-		middlewares.ByPage(c, func(pageNumber int, pageSize int) (int64, any, error) {
-			if pageNumber <= 0 {
-				pageNumber = 0
-			} else {
-				pageNumber = pageNumber - 1
-			}
-			if pageSize <= 0 {
-				pageSize = 20
-			}
+		middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {
 			sm := mak.NewSQLSM()
 			f(sm)
-			sm.LIMIT(pageNumber*pageSize, pageSize)
+			sm.LIMIT(page.PageNumber*page.PageSize, page.PageSize)
 			out := sm.Execute(conf.Db).GetResultAsMapList()
-			if pageNumber == 0 {
+			if page.PageNumber == 0 {
 				return sm.Execute(conf.Db).Count(), out, nil
 			}
 			return 0, out, nil
@@ -233,8 +225,8 @@ func (ctrl *ApiController) executeById(c *gin.Context) {
 	runUnsafe(*api.Script, time.Duration(10), c, reqBody.Args)
 }
 func (ctrl *ApiController) byPage(c *gin.Context) {
-	middlewares.ByPage(c, func(pageNumber int, pageSize int) (int64, any, error) {
-		return ctrl.apiService.ListByPage(pageNumber, pageSize, func(sm *mak.SQLSM) {
+	middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {
+		return ctrl.apiService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
 			sm.SELECT("*").FROM(entity.Api{}, "a")
 		})
 	})
