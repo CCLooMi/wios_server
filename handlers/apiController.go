@@ -6,16 +6,26 @@ import (
 	"errors"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
 	"github.com/robertkrimen/otto"
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/encoding/korean"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/encoding/traditionalchinese"
+	"golang.org/x/text/encoding/unicode"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
 	"wios_server/service"
+	"wios_server/utils"
 )
 
 type ApiController struct {
@@ -32,6 +42,8 @@ func NewApiController(app *gin.Engine) *ApiController {
 	ctrl := &ApiController{db: conf.Db, apiService: service.NewApiService(conf.Db)}
 	group := app.Group("/api")
 	hds := []middlewares.Auth{
+		{Method: "GET", Group: "/api", Path: "/stopVmById", Auth: "api.stopVmById", Handler: ctrl.stopVmById},
+		{Method: "GET", Group: "/api", Path: "/vms", Auth: "api.vms", Handler: ctrl.vms},
 		{Method: "POST", Group: "/api", Path: "/execute", Auth: "api.execute", Handler: ctrl.execute},
 		{Method: "POST", Group: "/api", Path: "/executeById", Auth: "api.executeById", Handler: ctrl.executeById},
 		{Method: "POST", Group: "/api", Path: "/byPage", Auth: "api.list", Handler: ctrl.byPage},
@@ -85,21 +97,59 @@ var expM = expStruct{
 }
 var halt = errors.New("Stahp")
 
-func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any) {
+func closeChannel(c chan func()) {
+	select {
+	case c <- func() {}:
+		close(c)
+	default:
+	}
+}
+
+type vmMeta struct {
+	title *string
+	user  *entity.User
+	exit  func()
+}
+
+var vmMap = make(map[string]*vmMeta)
+
+func runUnsafe(unsafe string, title *string, c *gin.Context, args []any) {
+	ui, ok := c.Get("userInfo")
+	if !ok {
+		msg.Error(c, "userInfo not found")
+		return
+	}
+	userInfo, ok := ui.(*middlewares.UserInfo)
+	if !ok {
+		msg.Error(c, "userInfo not found")
+		return
+	}
+
 	start := time.Now()
 	defer func() {
 		duration := time.Since(start)
 		if caught := recover(); caught != nil {
 			if caught == halt {
-				msg.Error(c, "Some code took to long! Stopping after: "+duration.String())
+				msg.Error(c, "Stopping after: "+duration.String())
 				return
 			}
 			// Something else happened, repanic!
 			panic(caught)
 		}
 	}()
+	vmId := utils.UUID()
 	vm := otto.New()
 	vm.Interrupt = make(chan func(), 1)
+	var exit = func() {
+		vm.Interrupt <- func() {
+			panic(halt)
+		}
+		delete(vmMap, vmId)
+		closeChannel(vm.Interrupt)
+	}
+	vmMap[vmId] = &vmMeta{title: title, user: userInfo.User, exit: exit}
+	defer closeChannel(vm.Interrupt)
+	defer delete(vmMap, vmId)
 	vm.Set("request", c)
 	vm.Set("msgOk", func(data any) {
 		msg.Ok(c, data)
@@ -122,26 +172,32 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 			return 0, out, nil
 		})
 	})
+	vm.Set("UUID", utils.UUID)
+	vm.Set("uuid", utils.UUID)
+	vm.Set("userInfo", userInfo)
 	vm.Set("db", conf.Db)
 	vm.Set("rdb", conf.Rdb)
 	vm.Set("cfg", conf.Cfg)
 	vm.Set("sql", mysqlM)
 	vm.Set("exp", expM)
 	vm.Set("args", args)
-	vm.Set("fetch", fetch)
-	watchdogCleanup := make(chan struct{})
-	defer close(watchdogCleanup)
-	go func() {
-		select {
-		// Stop after timeout
-		case <-time.After(timeout * time.Second):
-			vm.Interrupt <- func() {
-				panic(halt)
-			}
-		case <-watchdogCleanup:
+	vm.Set("fetch", func(url string, opts ...interface{}) map[string]interface{} {
+		result, err := fetch(url, opts...)
+		if err != nil {
+			msg.Error(c, err.Error())
+			return nil
 		}
-		close(vm.Interrupt)
-	}()
+		return result
+	})
+	vm.Set("$", func(str string) *goquery.Document {
+		result, error := goquery.NewDocumentFromReader(strings.NewReader(str))
+		if error != nil {
+			msg.Error(c, error.Error())
+			return nil
+		}
+		return result
+	})
+	vm.Set("exit", exit)
 	result, err := vm.Run(unsafe)
 	if err != nil {
 		msg.Error(c, err.Error())
@@ -154,6 +210,68 @@ func runUnsafe(unsafe string, timeout time.Duration, c *gin.Context, args []any)
 		}
 	}
 	msg.Ok(c, result)
+	return
+}
+func getStrDecode(name string) *encoding.Decoder {
+	switch strings.ToUpper(name) {
+	case "UTF8", "UTF-8":
+		return unicode.UTF8.NewDecoder()
+	case "GBK", "GB2312":
+		return simplifiedchinese.GBK.NewDecoder()
+	case "GB18030":
+		return simplifiedchinese.GB18030.NewDecoder()
+	case "BIG5":
+		return traditionalchinese.Big5.NewDecoder()
+	case "ISO-8859-1":
+		return charmap.ISO8859_1.NewDecoder()
+	case "ISO-8859-2":
+		return charmap.ISO8859_2.NewDecoder()
+	case "ISO-8859-3":
+		return charmap.ISO8859_3.NewDecoder()
+	case "ISO-8859-4":
+		return charmap.ISO8859_4.NewDecoder()
+	case "ISO-8859-5":
+		return charmap.ISO8859_5.NewDecoder()
+	case "ISO-8859-6":
+		return charmap.ISO8859_6.NewDecoder()
+	case "ISO-8859-7":
+		return charmap.ISO8859_7.NewDecoder()
+	case "ISO-8859-8":
+		return charmap.ISO8859_8.NewDecoder()
+	case "ISO-8859-9":
+		return charmap.ISO8859_9.NewDecoder()
+	case "ISO-8859-10":
+		return charmap.ISO8859_10.NewDecoder()
+	case "WINDOWS-1250":
+		return charmap.Windows1250.NewDecoder()
+	case "WINDOWS-1251":
+		return charmap.Windows1251.NewDecoder()
+	case "WINDOWS-1252":
+		return charmap.Windows1252.NewDecoder()
+	case "WINDOWS-1253":
+		return charmap.Windows1253.NewDecoder()
+	case "WINDOWS-1254":
+		return charmap.Windows1254.NewDecoder()
+	case "WINDOWS-1255":
+		return charmap.Windows1255.NewDecoder()
+	case "WINDOWS-1256":
+		return charmap.Windows1256.NewDecoder()
+	case "WINDOWS-1257":
+		return charmap.Windows1257.NewDecoder()
+	case "WINDOWS-1258":
+		return charmap.Windows1258.NewDecoder()
+	case "KOI8-R":
+		return korean.EUCKR.NewDecoder()
+	case "EUC-JP":
+		return japanese.EUCJP.NewDecoder()
+	case "ISO-2022-JP":
+		return japanese.ISO2022JP.NewDecoder()
+	case "UTF-16", "UTF-16BE":
+		return unicode.UTF16(unicode.BigEndian, unicode.UseBOM).NewDecoder()
+	case "UTF-16LE":
+		return unicode.UTF16(unicode.LittleEndian, unicode.UseBOM).NewDecoder()
+	}
+	return unicode.UTF8.NewDecoder()
 }
 func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
 	var opts map[string]interface{}
@@ -186,20 +304,43 @@ func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	charset, ok := opts["charset"].(string)
+	if !ok {
+		charset = "UTF8"
+	}
+	decode := getStrDecode(charset)
 	rspBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
+	dc, err := decode.Bytes(rspBody)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]interface{}{
-		"Response":   string(rspBody),
-		"Request":    resp.Request,
-		"Status":     resp.Status,
-		"StatusCode": resp.StatusCode,
-		"Header":     resp.Header,
-		"Cookies": func() []*http.Cookie {
+		"response":   string(dc),
+		"request":    resp.Request,
+		"status":     resp.Status,
+		"statusCode": resp.StatusCode,
+		"header":     resp.Header,
+		"cookies": func() []*http.Cookie {
 			return resp.Cookies()
 		},
 	}, nil
+}
+
+func (ctrl *ApiController) vms(c *gin.Context) {
+	msg.Ok(c, vmMap)
+}
+func (ctrl *ApiController) stopVmById(c *gin.Context) {
+	vmId := c.Query("id")
+	vm := vmMap[vmId]
+	if vm == nil {
+		msg.Error(c, "vm not found")
+		return
+	}
+	vm.exit()
+	msg.Ok(c, true)
 }
 func (ctrl *ApiController) execute(c *gin.Context) {
 	var reqBody ReqBody
@@ -207,7 +348,11 @@ func (ctrl *ApiController) execute(c *gin.Context) {
 		msg.Error(c, err)
 		return
 	}
-	runUnsafe(*reqBody.Script, time.Duration(10), c, reqBody.Args)
+	if reqBody.Script == nil {
+		msg.Ok(c, "")
+		return
+	}
+	runUnsafe(*reqBody.Script, reqBody.ID, c, reqBody.Args)
 }
 func (ctrl *ApiController) executeById(c *gin.Context) {
 	var reqBody ReqBody
@@ -222,7 +367,11 @@ func (ctrl *ApiController) executeById(c *gin.Context) {
 		msg.Error(c, "api not found")
 		return
 	}
-	runUnsafe(*api.Script, time.Duration(10), c, reqBody.Args)
+	if api.Script == nil {
+		msg.Ok(c, "")
+		return
+	}
+	runUnsafe(*api.Script, api.Desc, c, reqBody.Args)
 }
 func (ctrl *ApiController) byPage(c *gin.Context) {
 	middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {
