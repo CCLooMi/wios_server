@@ -32,11 +32,6 @@ type ApiController struct {
 	db         *sql.DB
 	apiService *service.ApiService
 }
-type ReqBody struct {
-	ID     *string `json:"id"`
-	Script *string `json:"script"`
-	Args   []any   `json:"args"`
-}
 
 func NewApiController(app *gin.Engine) *ApiController {
 	ctrl := &ApiController{db: conf.Db, apiService: service.NewApiService(conf.Db)}
@@ -113,7 +108,7 @@ type vmMeta struct {
 
 var vmMap = make(map[string]*vmMeta)
 
-func runUnsafe(unsafe string, title *string, c *gin.Context, args []any) {
+func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody map[string]interface{}) {
 	ui, ok := c.Get("userInfo")
 	if !ok {
 		msg.Error(c, "userInfo not found")
@@ -160,8 +155,8 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any) {
 	vm.Set("msgOks", func(data ...any) {
 		msg.Oks(c, data...)
 	})
-	vm.Set("byPage", func(f func(sm *mak.SQLSM, opts ...interface{})) {
-		middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {
+	vm.Set("byPage", func(f func(sm *mak.SQLSM, opts interface{})) {
+		middlewares.ByPageMap(reqBody, c, func(page *middlewares.Page) (int64, any, error) {
 			sm := mak.NewSQLSM()
 			f(sm, page.Opts)
 			sm.LIMIT(page.PageNumber*page.PageSize, page.PageSize)
@@ -169,7 +164,7 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any) {
 			if page.PageNumber == 0 {
 				return sm.Execute(conf.Db).Count(), out, nil
 			}
-			return 0, out, nil
+			return -1, out, nil
 		})
 	})
 	vm.Set("UUID", utils.UUID)
@@ -343,26 +338,43 @@ func (ctrl *ApiController) stopVmById(c *gin.Context) {
 	msg.Ok(c, true)
 }
 func (ctrl *ApiController) execute(c *gin.Context) {
-	var reqBody ReqBody
+	var reqBody map[string]interface{}
 	if err := c.BindJSON(&reqBody); err != nil {
 		msg.Error(c, err)
 		return
 	}
-	if reqBody.Script == nil {
+	id, ok := reqBody["id"].(string)
+	if !ok {
+		id = utils.UUID()
+	}
+	script, ok := reqBody["script"].(string)
+	if !ok {
 		msg.Ok(c, "")
 		return
 	}
-	runUnsafe(*reqBody.Script, reqBody.ID, c, reqBody.Args)
+	args, ok := reqBody["args"].([]interface{})
+	if !ok {
+		args = []interface{}{}
+	}
+	runUnsafe(script, &id, c, args, reqBody)
 }
 func (ctrl *ApiController) executeById(c *gin.Context) {
-	var reqBody ReqBody
+	var reqBody map[string]interface{}
 	if err := c.BindJSON(&reqBody); err != nil {
 		msg.Error(c, err)
 		return
 	}
+	id, ok := reqBody["id"].(string)
+	if !ok {
+		id = utils.UUID()
+	}
+	args, ok := reqBody["args"].([]interface{})
+	if !ok {
+		args = []interface{}{}
+	}
 
 	api := &entity.Api{}
-	ctrl.apiService.ById(reqBody.ID, api)
+	ctrl.apiService.ById(&id, api)
 	if api.Id == nil {
 		msg.Error(c, "api not found")
 		return
@@ -371,7 +383,7 @@ func (ctrl *ApiController) executeById(c *gin.Context) {
 		msg.Ok(c, "")
 		return
 	}
-	runUnsafe(*api.Script, api.Desc, c, reqBody.Args)
+	runUnsafe(*api.Script, api.Desc, c, args, reqBody)
 }
 func (ctrl *ApiController) byPage(c *gin.Context) {
 	middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {

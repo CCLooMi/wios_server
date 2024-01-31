@@ -129,5 +129,5 @@ func (dao *BaseDao) ByPage(out interface{}, pageNumber, pageSize int, byPage ByP
 	if pageNumber == 0 {
 		return sm.Execute(dao.db).Count(), nil
 	}
-	return 0, nil
+	return -1, nil
 }
