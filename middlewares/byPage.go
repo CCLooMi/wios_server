@@ -21,9 +21,7 @@ func ByPage(c *gin.Context, f func(page *Page) (int64, any, error)) {
 		}
 	}
 	if page.PageNumber <= 0 {
-		page.PageNumber = 0
-	} else {
-		page.PageNumber = page.PageNumber - 1
+		page.PageNumber = 1
 	}
 	if page.PageSize <= 0 {
 		page.PageSize = 20
@@ -60,9 +58,7 @@ func ByPageMap(reqBody map[string]interface{}, c *gin.Context, f func(page *Page
 		Opts:       opts,
 	}
 	if page.PageNumber <= 0 {
-		page.PageNumber = 0
-	} else {
-		page.PageNumber = page.PageNumber - 1
+		page.PageNumber = 1
 	}
 	if page.PageSize <= 0 {
 		page.PageSize = 20

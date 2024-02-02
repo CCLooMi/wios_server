@@ -114,7 +114,7 @@ func (dao *BaseDao) ByPage(out interface{}, pageNumber, pageSize int, byPage ByP
 	}
 	outEle := reflect.New(outType).Elem().Interface()
 	fmt.Println(reflect.TypeOf(outEle))
-	if pageNumber <= 0 {
+	if pageNumber < 0 {
 		pageNumber = 0
 	} else {
 		pageNumber = pageNumber - 1

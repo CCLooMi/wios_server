@@ -157,6 +157,11 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 	})
 	vm.Set("byPage", func(f func(sm *mak.SQLSM, opts interface{})) {
 		middlewares.ByPageMap(reqBody, c, func(page *middlewares.Page) (int64, any, error) {
+			if page.PageNumber < 0 {
+				page.PageNumber = 0
+			} else {
+				page.PageNumber -= 1
+			}
 			sm := mak.NewSQLSM()
 			f(sm, page.Opts)
 			sm.LIMIT(page.PageNumber*page.PageSize, page.PageSize)
