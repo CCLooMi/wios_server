@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"unsafe"
 	"wios_server/conf"
+	"wios_server/entity"
+	"wios_server/service"
 	"wios_server/utils"
 )
 
@@ -42,6 +44,7 @@ var iSetMap = []byte{
 type FileInfo struct {
 	Id   string `json:"id"`
 	Size int64  `json:"size"`
+	Type string `json:"type"`
 	Name string `json:"name"`
 }
 type FileAgent struct {
@@ -196,7 +199,7 @@ func PushFinishedCmd(bid []byte, cnn *websocket.Conn) {
 	copy(bb[4:], bid)
 	pushBinMsg(bb, cnn)
 }
-func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
+func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
 	fid := fileInfo.Id
 	bid, _ := hex.DecodeString(fid)
 	basePath := path.Join(conf.Cfg.FileServer.SaveDir, utils.GetFPathByFid(fid))
@@ -218,6 +221,20 @@ func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
 	}
 	uploaderMap[cnnAddress] = fa
 	fa.Uploader[cnnAddress] = true
+
+	//start save file info
+	fi := entity.Upload{
+		FileId:   &fileInfo.Id,
+		FileType: &fileInfo.Type,
+		FileName: &fileInfo.Name,
+		FileSize: &fileInfo.Size,
+	}
+	fi.Id = new(string)
+	*fi.Id = utils.UUID()
+	fi.UploadSize = new(int64)
+	*fi.UploadSize = fa.Uploaded
+	uploadServer.SaveUpdate(&fi)
+	//end save file info
 
 	agentMap[fid] = fa
 	cmd := &UploadCommand{Id: bid}
@@ -274,6 +291,7 @@ func NewBSet(fSize int64) []byte {
 
 func HandleFileUpload(app *gin.Engine) {
 	path := conf.Cfg.FileServer.Path
+	uploadServer := service.NewUploadService(conf.Db)
 	app.GET(path, func(c *gin.Context) {
 		// 升级HTTP连接为WebSocket连接
 		upgrader := websocket.Upgrader{
@@ -306,11 +324,11 @@ func HandleFileUpload(app *gin.Engine) {
 					fmt.Println("Error:", err)
 					break
 				}
-				onStrMsg(&fileInfo, conn, address)
+				onStrMsg(&fileInfo, conn, address, uploadServer)
 				continue
 			}
 			if msgType == websocket.BinaryMessage {
-				onBinMsg(msg, conn)
+				onBinMsg(msg, conn, uploadServer)
 				continue
 			}
 		}
@@ -328,10 +346,10 @@ func onClose(cnn *websocket.Conn, cnnAddress int64) {
 		fa.Dispose()
 	}
 }
-func onStrMsg(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64) {
-	CheckExist(fileInfo, cnn, cnnAddress)
+func onStrMsg(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
+	CheckExist(fileInfo, cnn, cnnAddress, uploadServer)
 }
-func onBinMsg(msg []byte, cnn *websocket.Conn) {
+func onBinMsg(msg []byte, cnn *websocket.Conn, uploadServer *service.UploadService) {
 	start := binary.BigEndian.Uint64(msg[:8])
 	bidLen := binary.BigEndian.Uint32(msg[8 : 8+4])
 	bid := msg[8+4 : 8+4+bidLen]
@@ -346,6 +364,8 @@ func onBinMsg(msg []byte, cnn *websocket.Conn) {
 	} else {
 		fa.CommandComplete(cmd, msg[8+4+bidLen:])
 	}
+	//update upload size
+	uploadServer.UpdateUploadSize(&id, &fa.Uploaded)
 	if fa.Complete {
 		PushFinishedCmd(bid, cnn)
 		return

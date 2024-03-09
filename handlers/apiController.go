@@ -146,6 +146,7 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 	defer closeChannel(vm.Interrupt)
 	defer delete(vmMap, vmId)
 	vm.Set("request", c)
+	vm.Set("reqBody", reqBody)
 	vm.Set("msgOk", func(data any) {
 		msg.Ok(c, data)
 	})
@@ -172,6 +173,8 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 			return -1, out, nil
 		})
 	})
+	vm.Set("LookupDNSRecord", utils.LookupDNSRecord)
+	vm.Set("OpenExcel", utils.OpenExcel)
 	vm.Set("UUID", utils.UUID)
 	vm.Set("uuid", utils.UUID)
 	vm.Set("userInfo", userInfo)

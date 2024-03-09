@@ -90,12 +90,12 @@ func (*RoleUser) TableName() string {
 
 type Upload struct {
 	entity.IdEntity
-	FileId   *string `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
-	FileName *string `orm:"varchar(255) comment '文件名称'" column:"file_name" json:"fileName"`
-	FileType *string `orm:"varchar(64) comment '文件类型'" column:"file_type" json:"fileType"`
-	FileSize *int64  `orm:"bigint comment '文件大小'" column:"file_size" json:"fileSize"`
-	BizId    *string `orm:"varchar(32) comment '业务ID'" column:"biz_id" json:"bizId"`
-	BizType  *string `orm:"varchar(255) comment '业务类型'" column:"biz_type" json:"bizType"`
+	FileId     *string `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
+	FileName   *string `orm:"varchar(255) comment '文件名称'" column:"file_name" json:"fileName"`
+	FileType   *string `orm:"varchar(64) comment '文件类型'" column:"file_type" json:"fileType"`
+	FileSize   *int64  `orm:"bigint comment '文件大小'" column:"file_size" json:"fileSize"`
+	UploadSize *int64  `orm:"bigint comment '上传大小'" column:"upload_size" json:"uploadSize"`
+	DelFlag    *bool   `orm:"tinyint comment '删除标识1删除0未删除'" column:"del_flag" json:"delFlag"`
 	entity.TimeEntity
 }
 

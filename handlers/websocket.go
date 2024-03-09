@@ -1,10 +1,9 @@
 package handlers
 
 import (
-	"log"
-
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"log"
 )
 
 func HandleWebSocket(app *gin.Engine) {

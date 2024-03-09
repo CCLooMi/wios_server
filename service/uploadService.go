@@ -2,7 +2,9 @@ package service
 
 import (
 	"database/sql"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
+	"wios_server/conf"
 	"wios_server/dao"
 	"wios_server/entity"
 	"wios_server/utils"
@@ -28,4 +30,13 @@ func (dao *UploadService) SaveUpdate(upload *entity.Upload) sql.Result {
 		*upload.Id = utils.UUID()
 	}
 	return dao.SaveOrUpdate(upload)
+}
+
+func (dao *UploadService) UpdateUploadSize(fid *string, size *int64) sql.Result {
+	return mysql.UPDATE(&entity.Upload{}, "u").
+		SET("u.upload_size = ?", size).
+		WHERE("u.file_id = ?", fid).
+		AND("u.file_size <> u.upload_size").
+		Execute(conf.Db).
+		Update()
 }
