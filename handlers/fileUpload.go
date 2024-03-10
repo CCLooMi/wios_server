@@ -205,6 +205,20 @@ func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploa
 	basePath := path.Join(conf.Cfg.FileServer.SaveDir, utils.GetFPathByFid(fid))
 	if _, err := os.Stat(filepath.Join(basePath, "0")); err == nil {
 		PushFinishedCmd(bid, cnn)
+		//start save update file info
+		fi := entity.Upload{
+			FileType: &fileInfo.Type,
+			FileName: &fileInfo.Name,
+			FileSize: &fileInfo.Size,
+		}
+		fi.Id = new(string)
+		*fi.Id = fileInfo.Id
+		fi.UploadSize = new(int64)
+		*fi.UploadSize = fileInfo.Size
+		fi.DelFlag = new(bool)
+		*fi.DelFlag = false
+		uploadServer.SaveUpdate(&fi)
+		//end save update file info
 		return
 	}
 	fa := agentMap[fid]
@@ -224,13 +238,12 @@ func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploa
 
 	//start save file info
 	fi := entity.Upload{
-		FileId:   &fileInfo.Id,
 		FileType: &fileInfo.Type,
 		FileName: &fileInfo.Name,
 		FileSize: &fileInfo.Size,
 	}
 	fi.Id = new(string)
-	*fi.Id = utils.UUID()
+	*fi.Id = fileInfo.Id
 	fi.UploadSize = new(int64)
 	*fi.UploadSize = fa.Uploaded
 	uploadServer.SaveUpdate(&fi)

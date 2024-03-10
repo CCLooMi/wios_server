@@ -89,8 +89,7 @@ func (*RoleUser) TableName() string {
 }
 
 type Upload struct {
-	entity.IdEntity
-	FileId     *string `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
+	entity.Id64Entity
 	FileName   *string `orm:"varchar(255) comment '文件名称'" column:"file_name" json:"fileName"`
 	FileType   *string `orm:"varchar(64) comment '文件类型'" column:"file_type" json:"fileType"`
 	FileSize   *int64  `orm:"bigint comment '文件大小'" column:"file_size" json:"fileSize"`
