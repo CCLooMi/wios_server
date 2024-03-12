@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"github.com/xuri/excelize/v2"
 	"net"
+	"os"
+	"path"
+	"path/filepath"
 	"time"
 	"wios_server/conf"
 )
@@ -140,4 +143,13 @@ func LookupDNSRecord(domain, dnsServer, recordType string) ([]string, error) {
 
 func OpenExcel(path string) (*excelize.File, error) {
 	return excelize.OpenFile(path)
+}
+func OpenExcelByFid(fid string) (*excelize.File, error) {
+	basePath := path.Join(conf.Cfg.FileServer.SaveDir, GetFPathByFid(fid))
+	path := filepath.Join(basePath, "0")
+	_, err := os.Stat(path)
+	if err == nil {
+		return OpenExcel(path)
+	}
+	return nil, err
 }

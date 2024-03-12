@@ -173,8 +173,8 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 			return -1, out, nil
 		})
 	})
-	vm.Set("LookupDNSRecord", utils.LookupDNSRecord)
-	vm.Set("OpenExcel", utils.OpenExcel)
+	vm.Set("lookupDNSRecord", utils.LookupDNSRecord)
+	vm.Set("openExcelById", utils.OpenExcelByFid)
 	vm.Set("UUID", utils.UUID)
 	vm.Set("uuid", utils.UUID)
 	vm.Set("userInfo", userInfo)

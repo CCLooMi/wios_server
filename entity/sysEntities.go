@@ -91,7 +91,7 @@ func (*RoleUser) TableName() string {
 type Upload struct {
 	entity.Id64Entity
 	FileName   *string `orm:"varchar(255) comment '文件名称'" column:"file_name" json:"fileName"`
-	FileType   *string `orm:"varchar(64) comment '文件类型'" column:"file_type" json:"fileType"`
+	FileType   *string `orm:"varchar(128) comment '文件类型'" column:"file_type" json:"fileType"`
 	FileSize   *int64  `orm:"bigint comment '文件大小'" column:"file_size" json:"fileSize"`
 	UploadSize *int64  `orm:"bigint comment '上传大小'" column:"upload_size" json:"uploadSize"`
 	DelFlag    *bool   `orm:"tinyint comment '删除标识1删除0未删除'" column:"del_flag" json:"delFlag"`
