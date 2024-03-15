@@ -175,6 +175,7 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 	})
 	vm.Set("lookupDNSRecord", utils.LookupDNSRecord)
 	vm.Set("openExcelById", utils.OpenExcelByFid)
+	vm.Set("delFileById", utils.DelFileByFid)
 	vm.Set("UUID", utils.UUID)
 	vm.Set("uuid", utils.UUID)
 	vm.Set("userInfo", userInfo)
@@ -397,6 +398,11 @@ func (ctrl *ApiController) byPage(c *gin.Context) {
 	middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {
 		return ctrl.apiService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
 			sm.SELECT("*").FROM(entity.Api{}, "a")
+			q := page.Opts["q"]
+			if q != nil && q != "" {
+				lik := "%" + q.(string) + "%"
+				sm.AND("(a.id = ? OR a.desc LIKE ? OR a.category LIKE ?)", q, lik, lik)
+			}
 		})
 	})
 }

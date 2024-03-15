@@ -140,16 +140,59 @@ func LookupDNSRecord(domain, dnsServer, recordType string) ([]string, error) {
 	}
 	return records, err
 }
-
-func OpenExcel(path string) (*excelize.File, error) {
-	return excelize.OpenFile(path)
-}
 func OpenExcelByFid(fid string) (*excelize.File, error) {
 	basePath := path.Join(conf.Cfg.FileServer.SaveDir, GetFPathByFid(fid))
 	path := filepath.Join(basePath, "0")
 	_, err := os.Stat(path)
 	if err == nil {
-		return OpenExcel(path)
+		return excelize.OpenFile(path)
 	}
 	return nil, err
+}
+func DelFileByFid(fid string) bool {
+	bid, err := hex.DecodeString(fid)
+	if err != nil {
+		return false
+	}
+	a := int(bid[0])
+	b := int(bid[1])
+	fpath := fmt.Sprintf("/%d/%d/%s", a, b, fid)
+	basePath := path.Join(conf.Cfg.FileServer.SaveDir, fpath)
+	err = os.RemoveAll(basePath)
+	if err != nil {
+		return false
+	}
+	fpath = fmt.Sprintf("/%d/%d", a, b)
+	basePath = path.Join(conf.Cfg.FileServer.SaveDir, fpath)
+	if !deleteEmptyFolder(basePath) {
+		return false
+	}
+	fpath = fmt.Sprintf("/%d", a)
+	basePath = path.Join(conf.Cfg.FileServer.SaveDir, fpath)
+	if !deleteEmptyFolder(basePath) {
+		return false
+	}
+	return true
+}
+func isDirEmpty(name string) bool {
+	f, err := os.Open(name)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	_, err = f.Readdir(1)
+	if err == nil {
+		return true
+	}
+	return false
+}
+func deleteEmptyFolder(path string) bool {
+	empty := isDirEmpty(path)
+	if !empty {
+		return false
+	}
+	if err := os.Remove(path); err != nil {
+		return false
+	}
+	return true
 }
