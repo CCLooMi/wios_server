@@ -149,6 +149,12 @@ func OpenExcelByFid(fid string) (*excelize.File, error) {
 	}
 	return nil, err
 }
+func SetExcelSheetRow(f *excelize.File, sheet string, cell string, data ...interface{}) error {
+	if err := f.SetSheetRow(sheet, cell, &data); err != nil {
+		return err
+	}
+	return nil
+}
 func DelFileByFid(fid string) bool {
 	bid, err := hex.DecodeString(fid)
 	if err != nil {
