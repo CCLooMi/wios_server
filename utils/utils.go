@@ -149,11 +149,23 @@ func OpenExcelByFid(fid string) (*excelize.File, error) {
 	}
 	return nil, err
 }
-func SetExcelSheetRow(f *excelize.File, sheet string, cell string, data ...interface{}) error {
+func SetExcelSheetRows(f *excelize.File, sheet string, cell string, data ...interface{}) error {
 	if err := f.SetSheetRow(sheet, cell, &data); err != nil {
 		return err
 	}
 	return nil
+}
+func SetExcelSheetRow(f *excelize.File, sheet string, cell string, data []interface{}) error {
+	if err := f.SetSheetRow(sheet, cell, &data); err != nil {
+		return err
+	}
+	return nil
+}
+func CellNameToCoordinates(cell string) (int, int, error) {
+	return excelize.CellNameToCoordinates(cell)
+}
+func CoordinatesToCellName(col int, row int, abs ...bool) (string, error) {
+	return excelize.CoordinatesToCellName(col, row, abs...)
 }
 func DelFileByFid(fid string) bool {
 	bid, err := hex.DecodeString(fid)
