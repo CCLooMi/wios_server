@@ -5,7 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 	"wios_server/conf"
 	"wios_server/entity"
@@ -24,6 +23,7 @@ func NewUserController(app *gin.Engine) *UserController {
 	ctrl := &UserController{userService: service.NewUserService(conf.Db)}
 	group := app.Group("/user")
 	hds := []middlewares.Auth{
+		{Method: "GET", Group: "/user", Path: "/initRoot", Handler: ctrl.initRootUser},
 		{Method: "POST", Group: "/user", Path: "/byPage", Auth: "user.list", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/user", Path: "/saveUpdate", Auth: "user.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/user", Path: "/delete", Auth: "user.delete", Handler: ctrl.delete},
@@ -91,10 +91,6 @@ func (ctrl *UserController) delete(ctx *gin.Context) {
 	}
 	msg.Error(ctx, "delete failed")
 }
-func removePortFromDomain(domain string) string {
-	parts := strings.Split(domain, ":")
-	return parts[0]
-}
 func (ctrl *UserController) login(ctx *gin.Context) {
 	var userInfo map[string]string
 	if err := ctx.ShouldBindJSON(&userInfo); err != nil {
@@ -107,15 +103,15 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 		return
 	}
 
-	CID, _ := ctx.Cookie("CID")
+	CID, _ := ctx.Cookie(middlewares.UserSessionIDKey)
 	if CID != "" {
 		utils.DelFromRedis(CID)
 	}
 	CID = utils.GenerateRandomID()
-	domain := removePortFromDomain(ctx.Request.Host)
+	domain := utils.RemoveDomainPort(ctx.Request.Host)
 	maxAge := 60 * 60 * 24
 	http.SetCookie(ctx.Writer, &http.Cookie{
-		Name:     "CID",
+		Name:     middlewares.UserSessionIDKey,
 		Value:    url.QueryEscape(CID),
 		MaxAge:   maxAge,
 		Path:     "/",
@@ -138,12 +134,12 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 }
 
 func (ctrl *UserController) currentUser(ctx *gin.Context) {
-	userInfo := ctx.MustGet("userInfo").(*middlewares.UserInfo)
+	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
 	msg.Ok(ctx, userInfo)
 }
 
 func (ctrl *UserController) logout(ctx *gin.Context) {
-	CID, err := ctx.Cookie("CID")
+	CID, err := ctx.Cookie(middlewares.UserSessionIDKey)
 	if err != nil || CID == "" {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "Unauthorized",
@@ -206,4 +202,28 @@ func (ctrl *UserController) removeRole(ctx *gin.Context) {
 		return
 	}
 	msg.Error(ctx, "save failed")
+}
+func (ctrl *UserController) initRootUser(ctx *gin.Context) {
+	user := entity.User{
+		Username: "root",
+		Nickname: "Super Admin",
+		Password: "apple",
+	}
+	if user.Id == nil {
+		if ctrl.userService.CheckExist(&entity.User{Username: user.Username}) {
+			msg.Ok(ctx, "root user already exists")
+			return
+		}
+	}
+	if user.Seed == nil {
+		user.Seed = utils.RandomBytes(8)
+		user.Password = utils.SHA256(user.Username, user.Password, user.Seed)
+	}
+	var rs = ctrl.userService.SaveUpdate(&user)
+	_, err := rs.RowsAffected()
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	msg.Ok(ctx, "init root user success")
 }

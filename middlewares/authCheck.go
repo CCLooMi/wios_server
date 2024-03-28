@@ -11,12 +11,13 @@ import (
 )
 
 type Auth struct {
-	id      *string
-	Method  string
-	Group   string
-	Path    string
-	Auth    string
-	Handler func(c *gin.Context)
+	id        *string
+	Method    string
+	Group     string
+	Path      string
+	Auth      string
+	Handler   func(c *gin.Context)
+	AuthCheck func(c *gin.Context)
 }
 
 func (a *Auth) GetId() string {
@@ -37,6 +38,9 @@ type UserInfo struct {
 	Roles       []entity.Role   `json:"roles"`
 	Permissions map[string]bool `json:"permissions"`
 }
+type StoreUserInfo struct {
+	User *entity.User `json:"user"`
+}
 
 func RegisterAuths(auths ...*Auth) {
 	for _, auth := range auths {
@@ -50,6 +54,10 @@ func RegisterAuth(auth *Auth) {
 		AuthList = append(AuthList, auth)
 	}
 }
+
+const UserInfoKey = "userInfo"
+const UserSessionIDKey = "CID"
+
 func AuthCheck(c *gin.Context) {
 	path := c.Request.URL.Path
 	auth := authMap[path]
@@ -57,8 +65,12 @@ func AuthCheck(c *gin.Context) {
 		c.Next()
 		return
 	}
+	if auth.AuthCheck != nil {
+		auth.AuthCheck(c)
+		return
+	}
 	// check CID value
-	cid, err := c.Cookie("CID")
+	cid, err := c.Cookie(UserSessionIDKey)
 	if err != nil {
 		// return 401
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -96,8 +108,41 @@ func AuthCheck(c *gin.Context) {
 	}
 
 	// save user info to context
-	c.Set("userInfo", &userInfo)
+	c.Set(UserInfoKey, &userInfo)
 
+	c.Next()
+}
+
+const StoreUserInfoKey = "storeUserInfo"
+const StoreSessionIDKey = "SID"
+
+func StoreAuthCheck(c *gin.Context) {
+	path := c.Request.URL.Path
+	auth := authMap[path]
+	if auth == nil || auth.Auth == "" {
+		c.Next()
+		return
+	}
+	// check SID value
+	sid, err := c.Cookie(StoreSessionIDKey)
+	if err != nil {
+		// return 401
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+	// get user info from redis by SID
+	var storeUserInfo = StoreUserInfo{}
+	err = utils.GetObjDataFromRedis(sid, &storeUserInfo)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+	// save user info to context
+	c.Set(StoreUserInfoKey, &storeUserInfo)
 	c.Next()
 }
 

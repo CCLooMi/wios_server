@@ -68,3 +68,19 @@ type Wpp struct {
 func (*Wpp) TableName() string {
 	return "t_wpps"
 }
+
+type StoreUser struct {
+	entity.IdEntity
+	Username *string `orm:"varchar(64); comment '用户名'" column:"username" json:"username"`
+	Nickname *string `orm:"varchar(64); comment '用户昵称'" column:"nickname" json:"nickname"`
+	Email    *string `orm:"varchar(256) comment '邮箱'" column:"email" json:"email"`
+	Phone    *string `orm:"varchar(16) comment '手机号'" column:"phone" json:"phone"`
+	Avatar   *string `orm:"longtext comment '头像'" column:"avatar" json:"avatar"`
+	Password string  `orm:"varchar(64); not null comment '用户密码'" column:"password" json:"password"`
+	Seed     []byte  `orm:"binary(8); not null comment '密码种子'" column:"seed" json:"seed"`
+	entity.TimeEntity
+}
+
+func (*StoreUser) TableName() string {
+	return "t_store_user"
+}

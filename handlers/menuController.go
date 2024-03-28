@@ -78,10 +78,13 @@ func (ctrl *MenuController) initMenus(ctx *gin.Context) {
 	menuMap := []map[string]interface{}{
 		{"id": "237372500b86260b748e95143587c991", "rootId": "2a9533d1aba99986babeece48ef2c1bc", "pid": "2a9533d1aba99986babeece48ef2c1bc", "idx": 0, "name": "Menus", "href": "main.menus"},
 		{"id": "ed709984b8d011ee82370242ac120002", "rootId": "2a9533d1aba99986babeece48ef2c1bc", "pid": "2a9533d1aba99986babeece48ef2c1bc", "idx": 0, "name": "Apis", "href": "main.apis"},
+		{"id": "0017df5a91bb2cadc5fcc22e0a360b76", "rootId": "2a9533d1aba99986babeece48ef2c1bc", "pid": "2a9533d1aba99986babeece48ef2c1bc", "idx": 0, "name": "Configs", "href": "main.configs"},
+		{"id": "1609474673d88caaa045ebaa8d9273c6", "rootId": "2a9533d1aba99986babeece48ef2c1bc", "pid": "2a9533d1aba99986babeece48ef2c1bc", "idx": 0, "name": "Uploads", "href": "main.uploads"},
 		{"id": "2a9533d1aba99986babeece48ef2c1bc", "rootId": "2a9533d1aba99986babeece48ef2c1bc", "pid": "#", "idx": 0, "name": "System", "href": ""},
 		{"id": "a658e46f2fe2699846bcf89053ae4001", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "#", "idx": 0, "name": "Security", "href": ""},
 		{"id": "f687ac08d79f2d066dd0d2d6058f7f01", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "a658e46f2fe2699846bcf89053ae4001", "idx": 0, "name": "Users", "href": "main.users"},
-		{"id": "f6b6af3a67dea5704da2a1150033063d", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "a658e46f2fe2699846bcf89053ae4001", "idx": 0, "name": "Roles", "href": "main.roles"}}
+		{"id": "f6b6af3a67dea5704da2a1150033063d", "rootId": "a658e46f2fe2699846bcf89053ae4001", "pid": "a658e46f2fe2699846bcf89053ae4001", "idx": 0, "name": "Roles", "href": "main.roles"},
+	}
 	menus := make([]entity.Menu, 0)
 	jsonStr, err := json.Marshal(menuMap)
 	if err != nil {

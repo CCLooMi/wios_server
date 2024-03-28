@@ -17,6 +17,7 @@ func RegisterHandlers(app *gin.Engine) {
 	NewUploadController(app)
 	NewApiController(app)
 	NewConfigController(app)
+	NewStoreUserController(app)
 	CorsRevertServer(app)
 	ServerStaticDir(app)
 }

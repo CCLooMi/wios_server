@@ -20,7 +20,7 @@ func NewUserService(db *sql.DB) *UserService {
 	return &UserService{BaseDao: dao.NewBaseDao(db)}
 }
 
-func (dao *UserService) FindById(id uint) (*entity.User, error) {
+func (dao *UserService) FindById(id *string) (*entity.User, error) {
 	var user entity.User
 	dao.ById(id, &user)
 	return &user, nil
@@ -36,6 +36,7 @@ func (dao *UserService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQL
 }
 func (dao *UserService) SaveUpdate(user *entity.User) sql.Result {
 	if user.Id == nil {
+		user.Id = new(string)
 		*user.Id = utils.UUID()
 	}
 	return dao.SaveOrUpdate(user)
@@ -74,12 +75,11 @@ func (dao *UserService) FindByUsernameAndPassword(username string, password stri
 
 func (dao *UserService) CheckExist(e *entity.User) bool {
 	var user entity.User
-	sm := mysql.SELECT("*").
+	sm := mysql.SELECT("COUNT(1)").
 		FROM(user, "e").
 		WHERE("e.username = ?", e.Username).
 		LIMIT(1)
-	dao.FindBySM(sm, &user)
-	return user.Id != nil
+	return dao.ExecuteSM(sm).Count() > 0
 }
 
 func (dao *UserService) FindMenusByUser(user *entity.User) []entity.Menu {

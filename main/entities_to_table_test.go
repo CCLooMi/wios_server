@@ -16,7 +16,6 @@ var tables = []interface{}{
 	&entity.Menu{},
 	&entity.Org{},
 	&entity.OrgUser{},
-	&entity.Permission{},
 	&entity.Role{},
 	&entity.RoleMenu{},
 	&entity.RolePermission{},
@@ -30,6 +29,7 @@ var tables = []interface{}{
 	&entity.Wpp{},
 	&entity.Api{},
 	&entity.Config{},
+	&entity.StoreUser{},
 }
 
 func TestEntitiesToTable(t *testing.T) {

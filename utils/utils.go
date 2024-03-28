@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 	"wios_server/conf"
 )
@@ -53,7 +54,18 @@ func SaveObjDataToRedis(key string, obj any, expire time.Duration) error {
 		Set(conf.Ctx, key, data, expire).
 		Err()
 }
-
+func SaveKVToRedis(key string, value string, expire time.Duration) error {
+	return conf.Rdb.
+		Set(conf.Ctx, key, value, expire).
+		Err()
+}
+func GetValueFromRedis(key string) (string, error) {
+	data, err := conf.Rdb.Get(conf.Ctx, key).Result()
+	if err != nil {
+		return "", err
+	}
+	return data, nil
+}
 func GetObjDataFromRedis(key string, out interface{}) error {
 	data, err := conf.Rdb.Get(conf.Ctx, key).Result()
 	if err != nil {
@@ -75,6 +87,10 @@ func RandomBytes(len int) []byte {
 }
 func SHA256(username string, password string, seed []byte) string {
 	b := sha256.Sum256(append([]byte(username+password), seed...))
+	return hex.EncodeToString(b[:])
+}
+func SHA_256(password string, seed []byte) string {
+	b := sha256.Sum256(append([]byte(password), seed...))
 	return hex.EncodeToString(b[:])
 }
 func LookupDNSRecord(domain, dnsServer, recordType string) ([]string, error) {
@@ -213,4 +229,9 @@ func deleteEmptyFolder(path string) bool {
 		return false
 	}
 	return true
+}
+
+func RemoveDomainPort(domain string) string {
+	parts := strings.Split(domain, ":")
+	return parts[0]
 }
