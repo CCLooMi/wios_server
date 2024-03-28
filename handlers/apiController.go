@@ -45,6 +45,7 @@ func NewApiController(app *gin.Engine) *ApiController {
 		{Method: "POST", Group: "/api", Path: "/saveUpdate", Auth: "api.saveUpdate", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/api", Path: "/saveUpdates", Auth: "api.saveUpdates", Handler: ctrl.saveUpdates},
 		{Method: "POST", Group: "/api", Path: "/delete", Auth: "api.delete", Handler: ctrl.delete},
+		{Method: "GET", Group: "/api", Path: "/backup", Auth: "api.backup", Handler: ctrl.backup},
 	}
 	for i, hd := range hds {
 		middlewares.RegisterAuth(&hds[i])
@@ -481,4 +482,13 @@ func (ctrl *ApiController) delete(c *gin.Context) {
 		return
 	}
 	msg.Error(c, "delete failed")
+}
+
+func (ctrl *ApiController) backup(c *gin.Context) {
+	err := ctrl.apiService.Backup()
+	if err != nil {
+		msg.Error(c, err)
+		return
+	}
+	msg.Ok(c, "ok")
 }

@@ -2,7 +2,11 @@ package service
 
 import (
 	"database/sql"
+	"encoding/csv"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
+	"os"
+	"wios_server/conf"
 	"wios_server/dao"
 	"wios_server/entity"
 	"wios_server/utils"
@@ -39,4 +43,41 @@ func (dao *ApiService) SaveUpdates(apis []entity.Api) []sql.Result {
 		list[i] = &apis[i]
 	}
 	return dao.BatchSaveOrUpdate(list...)
+}
+
+func (dao *ApiService) Backup() error {
+	err := os.MkdirAll("static/bak", os.ModePerm)
+	if err != nil {
+		return err
+	}
+	file, err := os.Create("static/bak/api.backup.csv")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	page := 0
+	pgSize := 1000
+	for {
+		data := mysql.SELECT("*").
+			FROM(entity.Api{}, "a").
+			LIMIT(page*(pgSize+1), pgSize).
+			Execute(conf.Db).
+			GetResultAsCSVData()
+		if len(data) > 1 {
+			err := writer.WriteAll(data)
+			if err != nil {
+				return err
+			}
+			if len(data) < pgSize {
+				break
+			}
+			page++
+			continue
+		}
+		break
+	}
+	return nil
 }

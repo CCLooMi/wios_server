@@ -1,0 +1,10 @@
+id,desc,script,type,category,status,inserted_at,updated_at,created_by,updated_by
+c4abb167ea8395cfd0dded69a9736932,海关编码分页查询,"byPage(function (sm, opts) {
+    sm.SELECT(""*"")
+    .FROM(""hs_info"",""h"")
+    if(opts.q){
+        var k = ""%""+opts.q+""%"";
+        sm.WHERE(""h.name LIKE ? OR h.detail LIKE ?"",k,k);
+    }
+});
+false;",,,,2024-03-28T18:32:53+08:00,2024-03-28T18:32:53+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
