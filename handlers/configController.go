@@ -21,6 +21,7 @@ func NewConfigController(app *gin.Engine) *ConfigController {
 		{Method: "POST", Group: "/config", Path: "/byPage", Auth: "config.list", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/config", Path: "/saveUpdate", Auth: "config.update", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/config", Path: "/delete", Auth: "config.delete", Handler: ctrl.delete},
+		{Method: "GET", Group: "/config", Path: "/reload", Auth: "config.reload", Handler: ctrl.reloadSysConfig},
 	}
 	for i, hd := range hds {
 		middlewares.RegisterAuth(&hds[i])
@@ -67,4 +68,8 @@ func (ctrl *ConfigController) delete(ctx *gin.Context) {
 		return
 	}
 	msg.Error(ctx, "delete failed")
+}
+func (ctrl *ConfigController) reloadSysConfig(ctx *gin.Context) {
+	conf.LoadSysCfg(conf.Db)
+	msg.Ok(ctx, "ok")
 }

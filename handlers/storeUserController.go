@@ -26,7 +26,7 @@ func NewStoreUserController(app *gin.Engine) *StoreUserController {
 		{Method: "POST", Group: "/storeUser", Path: "/login", Handler: ctrl.login},
 		{Method: "POST", Group: "/storeUser", Path: "/captcha", Handler: ctrl.captcha},
 		{Method: "POST", Group: "/storeUser", Path: "/byPage", Auth: "storeUser.byPage", Handler: ctrl.byPage},
-		{Method: "POST", Group: "/storeUser", Path: "/new", Auth: "#", Handler: ctrl.saveUpdate},
+		{Method: "POST", Group: "/storeUser", Path: "/new", Auth: "#", Handler: ctrl.newStoreUser},
 		{Method: "POST", Group: "/storeUser", Path: "/update", Auth: "#", Handler: ctrl.saveUpdate, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "POST", Group: "/storeUser", Path: "/delete", Auth: "#", Handler: ctrl.delete, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "GET", Group: "/storeUser", Path: "/current", Auth: "#", Handler: ctrl.currentStoreUser, AuthCheck: middlewares.StoreAuthCheck},
@@ -173,8 +173,8 @@ func (ctrl *StoreUserController) login(ctx *gin.Context) {
 		return
 	}
 	storeUser := ctrl.storeUserService.FindByUsernameAndPassword(userInfo["username"], userInfo["password"])
-	if storeUser == nil {
-		msg.Error(ctx, "username or password error")
+	if storeUser.Id == nil {
+		msg.Error(ctx, "username password error")
 		return
 	}
 	SID, _ := ctx.Cookie(middlewares.StoreSessionIDKey)

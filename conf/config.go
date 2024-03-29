@@ -3,12 +3,15 @@ package conf
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"os"
+	"wios_server/entity"
 )
 
 // FileServer config
@@ -69,6 +72,7 @@ var Cfg *Config
 var Db *sql.DB
 var Rdb *redis.Client
 var Ctx = context.Background()
+var SysCfg = make(map[string]interface{})
 
 func init() {
 	cfgName := "config.yaml"
@@ -92,11 +96,41 @@ func InitDB(config *Config) (*sql.DB, *redis.Client) {
 	if err != nil {
 		panic(err)
 	}
-
+	LoadSysCfg(db)
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", config.Redis.Host, config.Redis.Port),
 		Password: config.Redis.Password,
 		DB:       0,
 	})
 	return db, rdb
+}
+func LoadSysCfg(db *sql.DB) {
+	delSet := make(map[string]bool)
+	for key := range SysCfg {
+		delSet[key] = true
+	}
+	entity := entity.Config{}
+	mysql.SELECT("c.name", "c.value").
+		FROM(&entity, "c").
+		Execute(db).ExtractorResultSet(func(rs *sql.Rows) interface{} {
+		for rs.Next() {
+			var name, value string
+			err := rs.Scan(&name, &value)
+			if err != nil {
+				continue
+			}
+			delete(SysCfg, name)
+			var jo interface{}
+			err = json.Unmarshal([]byte(value), &jo)
+			if err != nil {
+				SysCfg[name] = value
+				continue
+			}
+			SysCfg[name] = jo
+		}
+		for key := range delSet {
+			delete(SysCfg, key)
+		}
+		return nil
+	})
 }

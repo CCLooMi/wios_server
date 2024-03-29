@@ -1,4 +1,10 @@
 id,desc,script,type,category,status,inserted_at,updated_at,created_by,updated_by
+ac60584a5c9a432dd1881cd6501c0bd9,系统配置查询,"var data = sql.SELECT(""c.value"")
+    .FROM(""sys_config"", ""c"")
+    .WHERE(""c.name=?"", args[0])
+    .Execute(db)
+    .GetResultAsList();
+JSON.parse(data);",,,,2024-03-28T19:08:34+08:00,2024-03-28T19:08:34+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 c4abb167ea8395cfd0dded69a9736932,海关编码分页查询,"byPage(function (sm, opts) {
     sm.SELECT(""*"")
     .FROM(""hs_info"",""h"")
