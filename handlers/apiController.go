@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
@@ -54,43 +53,6 @@ func NewApiController(app *gin.Engine) *ApiController {
 	return ctrl
 }
 
-type mySQLStruct struct {
-	SELECT        any
-	SELECT_EXP    any
-	SELECT_AS     any
-	SELECT_SM_AS  any
-	SELECT_EXP_AS any
-	INSERT_INTO   any
-	UPDATE        any
-	DELETE        any
-	TxExecute     any
-}
-
-var mysqlM = mySQLStruct{
-	mysql.SELECT,
-	mysql.SELECT_EXP,
-	mysql.SELECT_AS,
-	mysql.SELECT_SM_AS,
-	mysql.SELECT_EXP_AS,
-	mysql.INSERT_INTO,
-	mysql.UPDATE,
-	mysql.DELETE,
-	mysql.TxExecute,
-}
-
-type expStruct struct {
-	Now    any
-	UUID   any
-	Exp    any
-	ExpStr any
-}
-
-var expM = expStruct{
-	mak.Now,
-	mak.UUID,
-	mak.Exp,
-	mak.ExpStr,
-}
 var halt = errors.New("Stahp")
 
 func closeChannel(c chan func()) {
@@ -174,22 +136,6 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 			return -1, out, nil
 		})
 	})
-	vm.Set("lookupDNSRecord", utils.LookupDNSRecord)
-	vm.Set("openExcelById", utils.OpenExcelByFid)
-	vm.Set("setSheetRow", utils.SetExcelSheetRow)
-	vm.Set("setSheetRows", utils.SetExcelSheetRows)
-	vm.Set("cellNameToCoordinates", utils.CellNameToCoordinates)
-	vm.Set("coordinatesToCellName", utils.CoordinatesToCellName)
-	vm.Set("delFileById", utils.DelFileByFid)
-	vm.Set("UUID", utils.UUID)
-	vm.Set("uuid", utils.UUID)
-	vm.Set("userInfo", userInfo)
-	vm.Set("db", conf.Db)
-	vm.Set("rdb", conf.Rdb)
-	vm.Set("cfg", conf.Cfg)
-	vm.Set("sql", mysqlM)
-	vm.Set("exp", expM)
-	vm.Set("args", args)
 	vm.Set("fetch", func(url string, opts ...interface{}) map[string]interface{} {
 		result, err := fetch(url, opts...)
 		if err != nil {
@@ -206,7 +152,12 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 		}
 		return result
 	})
+	vm.Set("userInfo", userInfo)
+	vm.Set("args", args)
 	vm.Set("exit", exit)
+	for key, kfunc := range VMFuncs {
+		vm.Set(key, kfunc)
+	}
 	result, err := vm.Run(unsafe)
 	if err != nil {
 		msg.Error(c, err.Error())

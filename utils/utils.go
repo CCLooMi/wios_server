@@ -277,16 +277,18 @@ func BackupTableDataToCSV(tableName string, dir string, fileName string) error {
 }
 func SendEmail(subject string, body string, to ...string) error {
 	emailCfg := conf.SysCfg["sys.email"].(map[string]interface{})
-	port, ok := emailCfg["port"].(float64)
+	port, ok := emailCfg["smtpPort"].(float64)
 	if !ok {
 		port = 25
 	}
 	fromEmail := emailCfg["email"].(string)
 	password := emailCfg["password"].(string)
-	smptHost := emailCfg["smpt"].(string)
+	smptHost := emailCfg["smtp"].(string)
 	auth := smtp.PlainAuth("", fromEmail, password, smptHost)
-	msg := []byte("To: " + strings.Join(to, ",") + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"\r\n" + body + "\r\n")
+	msg := []byte(
+		"From: " + fromEmail + "\r\n" +
+			"To: " + strings.Join(to, ",") + "\r\n" +
+			"Subject: " + subject + "\r\n" +
+			"\r\n" + body + "\r\n")
 	return smtp.SendMail(smptHost+":"+strconv.Itoa(int(port)), auth, fromEmail, to, msg)
 }
