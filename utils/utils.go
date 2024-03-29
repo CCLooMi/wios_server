@@ -4,14 +4,18 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/xuri/excelize/v2"
 	"net"
+	"net/smtp"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	"wios_server/conf"
@@ -234,4 +238,55 @@ func deleteEmptyFolder(path string) bool {
 func RemoveDomainPort(domain string) string {
 	parts := strings.Split(domain, ":")
 	return parts[0]
+}
+func BackupTableDataToCSV(tableName string, dir string, fileName string) error {
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	file, err := os.Create(path.Join(dir, fileName))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	page := 0
+	pgSize := 1000
+	for {
+		data := mysql.SELECT("*").
+			FROM(tableName, "a").
+			LIMIT(page*(pgSize+1), pgSize).
+			Execute(conf.Db).
+			GetResultAsCSVData()
+		if len(data) > 1 {
+			err := writer.WriteAll(data)
+			if err != nil {
+				return err
+			}
+			if len(data) < pgSize {
+				break
+			}
+			page++
+			continue
+		}
+		break
+	}
+	return nil
+}
+func SendEmail(subject string, body string, to ...string) error {
+	emailCfg := conf.SysCfg["sys.email"].(map[string]interface{})
+	port, ok := emailCfg["port"].(float64)
+	if !ok {
+		port = 25
+	}
+	fromEmail := emailCfg["email"].(string)
+	password := emailCfg["password"].(string)
+	smptHost := emailCfg["smpt"].(string)
+	auth := smtp.PlainAuth("", fromEmail, password, smptHost)
+	msg := []byte("To: " + strings.Join(to, ",") + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"\r\n" + body + "\r\n")
+	return smtp.SendMail(smptHost+":"+strconv.Itoa(int(port)), auth, fromEmail, to, msg)
 }
