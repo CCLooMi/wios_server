@@ -286,9 +286,11 @@ func SendEmail(subject string, body string, to ...string) error {
 	smptHost := emailCfg["smtp"].(string)
 	auth := smtp.PlainAuth("", fromEmail, password, smptHost)
 	msg := []byte(
-		"From: " + fromEmail + "\r\n" +
-			"To: " + strings.Join(to, ",") + "\r\n" +
-			"Subject: " + subject + "\r\n" +
-			"\r\n" + body + "\r\n")
+		"From: " + fromEmail + "\n" +
+			"To: " + strings.Join(to, ",") + "\n" +
+			"Subject: " + subject + "\n" +
+			"MIME-version: 1.0;\n" +
+			"Content-Type: text/html; charset=\"UTF-8\";\n\n" +
+			body)
 	return smtp.SendMail(smptHost+":"+strconv.Itoa(int(port)), auth, fromEmail, to, msg)
 }
