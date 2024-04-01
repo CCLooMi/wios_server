@@ -64,9 +64,13 @@ func closeChannel(c chan func()) {
 }
 
 type vmMeta struct {
-	title *string
-	user  *entity.User
-	exit  func()
+	Title *string       `json:"title"`
+	User  *entity.User  `json:"user"`
+	Exit  func() string `json:"-"`
+}
+
+func (vm *vmMeta) SetTitle(t *string) {
+	vm.Title = t
 }
 
 var vmMap = make(map[string]*vmMeta)
@@ -98,14 +102,16 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 	vmId := utils.UUID()
 	vm := otto.New()
 	vm.Interrupt = make(chan func(), 1)
-	var exit = func() {
+	var exit = func() string {
 		vm.Interrupt <- func() {
 			panic(halt)
 		}
 		delete(vmMap, vmId)
 		closeChannel(vm.Interrupt)
+		return "vm[" + vmId + "] exited."
 	}
-	vmMap[vmId] = &vmMeta{title: title, user: userInfo.User, exit: exit}
+	var self = vmMeta{Title: title, User: userInfo.User, Exit: exit}
+	vmMap[vmId] = &self
 	defer closeChannel(vm.Interrupt)
 	defer delete(vmMap, vmId)
 	vm.Set("ctx", c)
@@ -113,7 +119,7 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 	vm.Set("msgOk", func(data any) {
 		msg.Ok(c, data)
 	})
-	vm.Set("msgError", func(err error) {
+	vm.Set("msgError", func(err any) {
 		msg.Error(c, err)
 	})
 	vm.Set("msgOks", func(data ...any) {
@@ -155,6 +161,7 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody
 	vm.Set("userInfo", userInfo)
 	vm.Set("args", args)
 	vm.Set("exit", exit)
+	vm.Set("self", &self)
 	for key, kfunc := range VMFuncs {
 		vm.Set(key, kfunc)
 	}
@@ -299,8 +306,7 @@ func (ctrl *ApiController) stopVmById(c *gin.Context) {
 		msg.Error(c, "vm not found")
 		return
 	}
-	vm.exit()
-	msg.Ok(c, true)
+	msg.Ok(c, vm.Exit())
 }
 func (ctrl *ApiController) execute(c *gin.Context) {
 	var reqBody map[string]interface{}

@@ -12,5 +12,9 @@ func Oks(ctx *gin.Context, data ...any) {
 	ctx.JSON(http.StatusOK, append([]any{0}, data...))
 }
 func Error(ctx *gin.Context, msg any) {
+	m, ok := msg.(error)
+	if ok {
+		msg = m.Error()
+	}
 	ctx.JSON(http.StatusOK, []any{1, msg})
 }

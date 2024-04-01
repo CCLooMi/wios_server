@@ -1,8 +1,14 @@
 package handlers
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
+	"github.com/robertkrimen/otto"
+	"html/template"
+	"strings"
+	"time"
 	"wios_server/conf"
 	"wios_server/utils"
 )
@@ -45,6 +51,27 @@ var expM = expStruct{
 	mak.ExpStr,
 }
 
+type templateStruct struct {
+	Parse any
+	Apply any
+}
+
+var templateM = templateStruct{
+	Apply: func(str string, data map[string]interface{}) (string, error) {
+		id := md5.Sum([]byte(str))
+		t := template.New(hex.EncodeToString(id[:]))
+		_, err := t.Parse(str)
+		if err != nil {
+			return "", err
+		}
+		var buf strings.Builder
+		err = t.Execute(&buf, data)
+		if err != nil {
+			return "", err
+		}
+		return buf.String(), nil
+	},
+}
 var VMFuncs = make(map[string]interface{})
 
 func init() {
@@ -61,8 +88,15 @@ func init() {
 	set("db", conf.Db)
 	set("rdb", conf.Rdb)
 	set("cfg", conf.Cfg)
+	set("sysCfg", conf.SysCfg)
 	set("sql", mysqlM)
 	set("exp", expM)
+	set("template", templateM)
+	set("sleep", func(call otto.FunctionCall) otto.Value {
+		duration, _ := call.Argument(0).ToInteger()
+		time.Sleep(time.Duration(duration) * time.Millisecond)
+		return otto.UndefinedValue()
+	})
 }
 func set(key string, value interface{}) {
 	VMFuncs[key] = value
