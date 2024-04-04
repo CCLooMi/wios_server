@@ -119,7 +119,7 @@ func LoadSysCfg(db *sql.DB) {
 			if err != nil {
 				continue
 			}
-			delete(SysCfg, name)
+			delete(delSet, name)
 			var jo interface{}
 			err = json.Unmarshal([]byte(value), &jo)
 			if err != nil {
