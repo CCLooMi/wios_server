@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/xuri/excelize/v2"
+	"html/template"
+	"math/big"
 	"net"
 	"net/smtp"
 	"os"
@@ -275,7 +277,7 @@ func BackupTableDataToCSV(tableName string, dir string, fileName string) error {
 	}
 	return nil
 }
-func SendEmail(subject string, body string, to ...string) error {
+func SendEmail(subject string, body *string, to ...string) error {
 	emailCfg := conf.SysCfg["sys.email"].(map[string]interface{})
 	port, ok := emailCfg["smtpPort"].(float64)
 	if !ok {
@@ -291,6 +293,35 @@ func SendEmail(subject string, body string, to ...string) error {
 			"Subject: " + subject + "\n" +
 			"MIME-version: 1.0;\n" +
 			"Content-Type: text/html; charset=\"UTF-8\";\n\n" +
-			body)
+			*body)
 	return smtp.SendMail(smptHost+":"+strconv.Itoa(int(port)), auth, fromEmail, to, msg)
+}
+func ApplyTemplate(text *string, name string, data any) (string, error) {
+	t := template.New(name)
+	_, err := t.Parse(*text)
+	if err != nil {
+		return "", err
+	}
+	var buf strings.Builder
+	err = t.Execute(&buf, data)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+const digits = "0123456789"
+
+var digits_lenth = big.NewInt(int64(len(digits)))
+
+func GenRandomNum(length int) string {
+	result := make([]byte, length)
+	for i := range result {
+		n, err := rand.Int(rand.Reader, digits_lenth)
+		if err != nil {
+			panic(err)
+		}
+		result[i] = digits[n.Int64()]
+	}
+	return string(result)
 }

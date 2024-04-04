@@ -6,6 +6,7 @@ import (
 	"github.com/mojocn/base64Captcha"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 	"wios_server/conf"
 	"wios_server/entity"
@@ -25,8 +26,10 @@ func NewStoreUserController(app *gin.Engine) *StoreUserController {
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/storeUser", Path: "/login", Handler: ctrl.login},
 		{Method: "POST", Group: "/storeUser", Path: "/captcha", Handler: ctrl.captcha},
+		{Method: "POST", Group: "/storeUser", Path: "/verifyCaptcha", Handler: ctrl.verifyCaptcha},
+		{Method: "POST", Group: "/storeUser", Path: "/sendVerifyCodeEmail", Handler: ctrl.sendVerifyCodeEmail},
+		{Method: "POST", Group: "/storeUser", Path: "/new", Handler: ctrl.newStoreUser},
 		{Method: "POST", Group: "/storeUser", Path: "/byPage", Auth: "storeUser.byPage", Handler: ctrl.byPage},
-		{Method: "POST", Group: "/storeUser", Path: "/new", Auth: "#", Handler: ctrl.newStoreUser},
 		{Method: "POST", Group: "/storeUser", Path: "/update", Auth: "#", Handler: ctrl.saveUpdate, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "POST", Group: "/storeUser", Path: "/delete", Auth: "#", Handler: ctrl.delete, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "GET", Group: "/storeUser", Path: "/current", Auth: "#", Handler: ctrl.currentStoreUser, AuthCheck: middlewares.StoreAuthCheck},
@@ -63,6 +66,9 @@ func (c *redisStore) Get(key string, clear bool) string {
 }
 func (c *redisStore) Verify(id, answer string, clear bool) bool {
 	v := c.Get(id, clear)
+	if v == "" {
+		return false
+	}
 	return v == answer
 }
 
@@ -109,13 +115,88 @@ func (ctrl *StoreUserController) captcha(ctx *gin.Context) {
 		"captcha": captchaB64,
 	})
 }
-func (ctrl *StoreUserController) newStoreUser(ctx *gin.Context) {
-	var userInfo map[string]string
-	if err := ctx.ShouldBindJSON(&userInfo); err != nil {
+func (ctrl *StoreUserController) verifyCaptcha(ctx *gin.Context) {
+	var m map[string]string
+	if err := ctx.ShouldBindJSON(&m); err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	//captchaStore.Verify(userInfo["captchaId"], userInfo["captchaValue"], true)
+	ok := captchaStore.Verify(m["id"], m["code"], false)
+	if ok {
+		msg.Ok(ctx, nil)
+		return
+	}
+	msg.Error(ctx, "invalid answer")
+}
+func (ctrl *StoreUserController) sendVerifyCodeEmail(ctx *gin.Context) {
+	var info map[string]string
+	if err := ctx.ShouldBindJSON(&info); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	captchaId := info["captchaId"]
+	code := info["code"]
+	if !captchaStore.Verify(captchaId, code, true) {
+		msg.Error(ctx, "invalid answer")
+		return
+	}
+	tmp := conf.SysCfg["code.verify.template"].(string)
+	code = utils.GenRandomNum(6)
+	info["code"] = code
+	info["year"] = strconv.Itoa(time.Now().Year())
+	body, err := utils.ApplyTemplate(&tmp, "code.verify.template", info)
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	email := info["email"]
+	err = utils.SendEmail("Verification Code From WiOS Group", &body, email)
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	err = captchaStore.Set(email, code)
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	msg.Ok(ctx, "ok")
+}
+func (ctrl *StoreUserController) newStoreUser(ctx *gin.Context) {
+	var m map[string]string
+	if err := ctx.ShouldBindJSON(&m); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	email := m["email"]
+	code := m["code"]
+	if !captchaStore.Verify(email, code, true) {
+		msg.Error(ctx, "invalid verify code!")
+		return
+	}
+	password := m["password"]
+	avatar := m["avatar"]
+	storeUser := entity.StoreUser{
+		Email:  &email,
+		Avatar: &avatar,
+		Seed:   utils.RandomBytes(8),
+	}
+	if ctrl.storeUserService.CheckExist(&storeUser) {
+		msg.Error(ctx, "user exists")
+		return
+	}
+	storeUser.Password = utils.SHA_256(password, storeUser.Seed)
+	r := ctrl.storeUserService.SaveOrUpdate(&storeUser)
+	rows, err := r.RowsAffected()
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	if rows == 0 {
+		msg.Error(ctx, "save failed")
+		return
+	}
+	msg.Ok(ctx, &storeUser)
 }
 func (ctrl *StoreUserController) saveUpdate(ctx *gin.Context) {
 	var storeUser entity.StoreUser

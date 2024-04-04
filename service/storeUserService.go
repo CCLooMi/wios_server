@@ -53,9 +53,7 @@ func (dao *StoreUserService) CheckExist(e *entity.StoreUser) bool {
 	var user entity.StoreUser
 	sm := mysql.SELECT("COUNT(1)").
 		FROM(user, "e").
-		WHERE("e.username = ?", e.Username).
-		OR("e.email = ?", e.Email).
-		OR("e.phone = ?", e.Phone).
+		WHERE("(e.username = ? OR e.email = ? OR e.phone = ?)", e.Username, e.Email, e.Phone).
 		LIMIT(1)
 	return dao.ExecuteSM(sm).Count() > 0
 }

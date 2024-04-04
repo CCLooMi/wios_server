@@ -6,8 +6,6 @@ import (
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/robertkrimen/otto"
-	"html/template"
-	"strings"
 	"time"
 	"wios_server/conf"
 	"wios_server/utils"
@@ -59,17 +57,8 @@ type templateStruct struct {
 var templateM = templateStruct{
 	Apply: func(str string, data map[string]interface{}) (string, error) {
 		id := md5.Sum([]byte(str))
-		t := template.New(hex.EncodeToString(id[:]))
-		_, err := t.Parse(str)
-		if err != nil {
-			return "", err
-		}
-		var buf strings.Builder
-		err = t.Execute(&buf, data)
-		if err != nil {
-			return "", err
-		}
-		return buf.String(), nil
+		name := hex.EncodeToString(id[:])
+		return utils.ApplyTemplate(&str, name, data)
 	},
 }
 var VMFuncs = make(map[string]interface{})
