@@ -34,12 +34,14 @@ var authMap = make(map[string]*Auth)
 var AuthList = make([]*Auth, 0)
 
 type UserInfo struct {
+	Id          string          `json:"-"`
 	User        *entity.User    `json:"user"`
 	Roles       []entity.Role   `json:"roles"`
 	Permissions map[string]bool `json:"permissions"`
 }
 type StoreUserInfo struct {
-	User *entity.User `json:"user"`
+	Id   string            `json:"-"`
+	User *entity.StoreUser `json:"user"`
 }
 
 func RegisterAuths(auths ...*Auth) {

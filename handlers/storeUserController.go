@@ -30,7 +30,7 @@ func NewStoreUserController(app *gin.Engine) *StoreUserController {
 		{Method: "POST", Group: "/storeUser", Path: "/sendVerifyCodeEmail", Handler: ctrl.sendVerifyCodeEmail},
 		{Method: "POST", Group: "/storeUser", Path: "/new", Handler: ctrl.newStoreUser},
 		{Method: "POST", Group: "/storeUser", Path: "/byPage", Auth: "storeUser.byPage", Handler: ctrl.byPage},
-		{Method: "POST", Group: "/storeUser", Path: "/update", Auth: "#", Handler: ctrl.saveUpdate, AuthCheck: middlewares.StoreAuthCheck},
+		{Method: "POST", Group: "/storeUser", Path: "/update", Auth: "#", Handler: ctrl.update, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "POST", Group: "/storeUser", Path: "/delete", Auth: "#", Handler: ctrl.delete, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "GET", Group: "/storeUser", Path: "/current", Auth: "#", Handler: ctrl.currentStoreUser, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "GET", Group: "/storeUser", Path: "/logout", Auth: "#", Handler: ctrl.logout, AuthCheck: middlewares.StoreAuthCheck},
@@ -198,35 +198,41 @@ func (ctrl *StoreUserController) newStoreUser(ctx *gin.Context) {
 	}
 	msg.Ok(ctx, &storeUser)
 }
-func (ctrl *StoreUserController) saveUpdate(ctx *gin.Context) {
+func (ctrl *StoreUserController) update(ctx *gin.Context) {
 	var storeUser entity.StoreUser
 	if err := ctx.ShouldBindJSON(&storeUser); err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	if storeUser.Id == nil {
-		if ctrl.storeUserService.CheckExist(&storeUser) {
-			msg.Error(ctx, "username email or phone exists")
-			return
-		}
-	} else {
-		currentUserInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
-		currentUser := currentUserInfo.User
-		if *currentUser.Id != *storeUser.Id {
-			msg.Error(ctx, "permission denied!")
-			return
-		}
+	currentUserInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
+	currentUser := currentUserInfo.User
+	if *currentUser.Id != *storeUser.Id {
+		msg.Error(ctx, "permission denied!")
+		return
 	}
-	if storeUser.Seed == nil {
-		storeUser.Seed = utils.RandomBytes(8)
+	if storeUser.Password == "" {
+		storeUser.Password = currentUser.Password
+	}
+	if storeUser.Password != currentUser.Password {
 		storeUser.Password = utils.SHA_256(storeUser.Password, storeUser.Seed)
 	}
-	var rs = ctrl.storeUserService.SaveOrUpdate(&storeUser)
+	var rs = ctrl.storeUserService.UpdateWithFilter(&storeUser,
+		func(fieldName *string, columnName *string, v interface{}, um *mak.SQLUM) bool {
+			if utils.IsBlank(v) {
+				return false
+			}
+			return true
+		})
 	_, err := rs.RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
+	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
+	userInfo.User = &storeUser
+	utils.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
+	storeUser.Password = ""
+	storeUser.Seed = nil
 	msg.Ok(ctx, &storeUser)
 }
 func (ctrl *StoreUserController) delete(ctx *gin.Context) {
@@ -276,6 +282,7 @@ func (ctrl *StoreUserController) login(ctx *gin.Context) {
 		HttpOnly: true,
 	})
 	infoMap := map[string]interface{}{
+		"id":   SID,
 		"user": storeUser,
 	}
 	err := utils.SaveObjDataToRedis(SID, infoMap, time.Hour*24)
@@ -283,10 +290,14 @@ func (ctrl *StoreUserController) login(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
+	storeUser.Seed = nil
+	storeUser.Password = ""
 	msg.Ok(ctx, &storeUser)
 }
 func (ctrl *StoreUserController) currentStoreUser(ctx *gin.Context) {
 	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
+	userInfo.User.Password = ""
+	userInfo.User.Seed = nil
 	msg.Ok(ctx, userInfo)
 }
 func (ctrl *StoreUserController) logout(ctx *gin.Context) {

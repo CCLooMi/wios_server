@@ -60,17 +60,41 @@ func (ctrl *UserController) saveUpdate(ctx *gin.Context) {
 			msg.Error(ctx, "username exists")
 			return
 		}
-	}
-	if user.Seed == nil {
 		user.Seed = utils.RandomBytes(8)
 		user.Password = utils.SHA256(user.Username, user.Password, user.Seed)
+	} else {
+		oldUser, _ := ctrl.userService.FindById(user.Id)
+		if oldUser.Id != nil {
+			if user.Password == "" {
+				user.Password = oldUser.Password
+			}
+			if user.Username == "" {
+				user.Username = oldUser.Username
+			}
+			if oldUser.Password != user.Password || oldUser.Username != user.Username {
+				user.Password = utils.SHA256(user.Username, user.Password, oldUser.Seed)
+			}
+		}
 	}
-	var rs = ctrl.userService.SaveUpdate(&user)
+	var rs = ctrl.userService.SaveUpdateWithFilter(&user,
+		func(fieldName *string, columnName *string, v interface{}, im *mak.SQLIM) bool {
+			if utils.IsBlank(v) {
+				return false
+			}
+			return true
+		})
 	_, err := rs.RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
+	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	if *userInfo.User.Id == *user.Id {
+		userInfo.User = &user
+		utils.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
+	}
+	user.Password = ""
+	user.Seed = nil
 	msg.Ok(ctx, &user)
 }
 func (ctrl *UserController) delete(ctx *gin.Context) {
@@ -121,6 +145,7 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 		HttpOnly: true,
 	})
 	infoMap := map[string]interface{}{
+		"id":          CID,
 		"user":        user,
 		"roles":       roles,
 		"permissions": pm,
@@ -130,11 +155,15 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
+	user.Password = ""
+	user.Seed = nil
 	msg.Ok(ctx, user)
 }
 
 func (ctrl *UserController) currentUser(ctx *gin.Context) {
 	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	userInfo.User.Password = ""
+	userInfo.User.Seed = nil
 	msg.Ok(ctx, userInfo)
 }
 

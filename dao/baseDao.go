@@ -50,7 +50,29 @@ func (dao *BaseDao) SaveOrUpdate(entity interface{}) sql.Result {
 	}
 	return im.Execute(dao.db).Update()
 }
-
+func (dao *BaseDao) SaveUpdateWithFilter(entity interface{},
+	ft func(fieldName *string, columnName *string, v interface{}, im *mak.SQLIM) bool) sql.Result {
+	ei := utils.GetEntityInfo(entity)
+	im := mysql.INSERT_INTO(entity).ON_DUPLICATE_KEY_UPDATE()
+	for _, col := range ei.Columns {
+		if col != ei.PrimaryKey {
+			fieldName := ei.CFMap[col]
+			v := utils.GetFieldValue(entity, fieldName)
+			if col == "inserted_at" {
+				im.SET("inserted_at=COALESCE(?,inserted_at,NOW())", v)
+				continue
+			}
+			if col == "updated_at" {
+				im.SET("updated_at=IFNULL(?, NOW())", v)
+				continue
+			}
+			if ft(&fieldName, &col, v, im) {
+				im.SET("`"+col+"`=?", v)
+			}
+		}
+	}
+	return im.Execute(dao.db).Update()
+}
 func (dao *BaseDao) BatchSaveOrUpdate(entities ...interface{}) []sql.Result {
 	if len(entities) == 0 {
 		return nil
@@ -93,6 +115,22 @@ func (dao *BaseDao) Update(entity interface{}) sql.Result {
 	for _, col := range ei.Columns {
 		if col != ei.PrimaryKey {
 			um.SET("e."+col+"=?", utils.GetFieldValue(entity, ei.CFMap[col]))
+		}
+	}
+	um.WHERE("e."+ei.PrimaryKey+" = ?", utils.GetFieldValue(entity, ei.CFMap[ei.PrimaryKey]))
+	return um.Execute(dao.db).Update()
+}
+func (dao *BaseDao) UpdateWithFilter(entity interface{},
+	ft func(fieldName *string, columnName *string, v interface{}, um *mak.SQLUM) bool) sql.Result {
+	ei := utils.GetEntityInfo(entity)
+	um := mysql.UPDATE(entity, "e")
+	for _, col := range ei.Columns {
+		if col != ei.PrimaryKey {
+			fieldName := ei.CFMap[col]
+			v := utils.GetFieldValue(entity, fieldName)
+			if ft(&fieldName, &col, v, um) {
+				um.SET("e."+col+"=?", v)
+			}
 		}
 	}
 	um.WHERE("e."+ei.PrimaryKey+" = ?", utils.GetFieldValue(entity, ei.CFMap[ei.PrimaryKey]))

@@ -325,3 +325,12 @@ func GenRandomNum(length int) string {
 	}
 	return string(result)
 }
+func IsBlank(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+	if str, ok := v.(string); ok && str != "" {
+		return false
+	}
+	return true
+}
