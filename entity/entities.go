@@ -58,15 +58,16 @@ func (*PurchasedWpp) TableName() string {
 type Wpp struct {
 	entity.IdEntity
 	Name        *string `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
-	Description *string `orm:"text comment '描述'" column:"description" json:"description"`
+	ReleaseNote *string `orm:"varchar(255) comment '发布日志'" column:"release_note" json:"releaseNote"`
 	Version     *string `orm:"varchar(32) comment '版本号'" column:"version" json:"version"`
+	WppId       *string `orm:"varchar(32) comment '应用ID'" column:"wpp_id" json:"wppId"`
 	DeveloperId *string `orm:"varchar(32) comment '开发者ID'" column:"developer_id" json:"developerId"`
 	FileId      *string `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
 	entity.TimeEntity
 }
 
 func (*Wpp) TableName() string {
-	return "t_wpps"
+	return "t_wpp"
 }
 
 type StoreUser struct {

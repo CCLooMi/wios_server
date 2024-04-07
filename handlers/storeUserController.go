@@ -18,10 +18,14 @@ import (
 
 type StoreUserController struct {
 	storeUserService *service.StoreUserService
+	wppService       *service.WppService
 }
 
 func NewStoreUserController(app *gin.Engine) *StoreUserController {
-	ctrl := &StoreUserController{storeUserService: service.NewStoreUserService(conf.Db)}
+	ctrl := &StoreUserController{
+		storeUserService: service.NewStoreUserService(conf.Db),
+		wppService:       service.NewWppService(conf.Db),
+	}
 	group := app.Group("/storeUser")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/storeUser", Path: "/login", Handler: ctrl.login},
@@ -34,6 +38,7 @@ func NewStoreUserController(app *gin.Engine) *StoreUserController {
 		{Method: "POST", Group: "/storeUser", Path: "/delete", Auth: "#", Handler: ctrl.delete, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "GET", Group: "/storeUser", Path: "/current", Auth: "#", Handler: ctrl.currentStoreUser, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "GET", Group: "/storeUser", Path: "/logout", Auth: "#", Handler: ctrl.logout, AuthCheck: middlewares.StoreAuthCheck},
+		{Method: "POST", Group: "/storeUser", Path: "/publish", Auth: "#", Handler: ctrl.publish, AuthCheck: middlewares.StoreAuthCheck},
 	}
 	for i, hd := range hds {
 		middlewares.RegisterAuth(&hds[i])
@@ -308,4 +313,37 @@ func (ctrl *StoreUserController) logout(ctx *gin.Context) {
 	}
 	utils.DelFromRedis(SID)
 	msg.Ok(ctx, nil)
+}
+func (ctrl *StoreUserController) publish(ctx *gin.Context) {
+	var m map[string]string
+	if err := ctx.ShouldBindJSON(&m); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
+	user := userInfo.User
+	fileId := m["fileId"]
+	name := m["name"]
+	releaseNote := m["releaseNote"]
+	version := m["version"]
+	wppId := m["wppId"]
+	wpp := entity.Wpp{
+		Name:        &name,
+		WppId:       &wppId,
+		DeveloperId: user.Id,
+		FileId:      &fileId,
+		ReleaseNote: &releaseNote,
+		Version:     &version,
+	}
+	if !ctrl.wppService.IsLatestVersion(&wpp) {
+		msg.Error(ctx, "version is not latest")
+		return
+	}
+	r := ctrl.wppService.SaveUpdate(&wpp)
+	_, err := r.RowsAffected()
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	msg.Ok(ctx, "ok")
 }

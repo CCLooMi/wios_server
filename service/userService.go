@@ -74,9 +74,8 @@ func (dao *UserService) FindByUsernameAndPassword(username string, password stri
 }
 
 func (dao *UserService) CheckExist(e *entity.User) bool {
-	var user entity.User
 	sm := mysql.SELECT("COUNT(1)").
-		FROM(user, "e").
+		FROM(entity.User{}, "e").
 		WHERE("e.username = ?", e.Username).
 		LIMIT(1)
 	return dao.ExecuteSM(sm).Count() > 0
