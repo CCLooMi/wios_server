@@ -339,16 +339,19 @@ func (ctrl *StoreUserController) publish(ctx *gin.Context) {
 	user := userInfo.User
 	manifest := m["manifest"]
 	wpp := entity.Wpp{
-		WppId:         &wppId,
 		Name:          &name,
 		Manifest:      &manifest,
 		LatestVersion: &version,
 		DeveloperId:   user.Id,
 		FileId:        &fileId,
 	}
-	oldWpp := ctrl.wppService.FindByWppId(wpp.WppId)
+	wpp.Id = &wppId
+	oldWpp := ctrl.wppService.FindById(wpp.Id)
 	if oldWpp.Id != nil {
-		wpp.Id = oldWpp.Id
+		if *oldWpp.DeveloperId != *user.Id {
+			msg.Error(ctx, "you are not the owner")
+			return
+		}
 	}
 	r := ctrl.wppService.SaveUpdate(&wpp)
 	_, err := r.RowsAffected()

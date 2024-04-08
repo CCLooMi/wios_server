@@ -71,7 +71,6 @@ func (*ReleaseNote) TableName() string {
 
 type Wpp struct {
 	entity.IdEntity
-	WppId         *string `orm:"varchar(32) comment '应用ID'" column:"wpp_id" json:"wppId"`
 	Name          *string `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
 	Manifest      *string `orm:"longtext comment '元数据'" column:"manifest" json:"manifest"`
 	LatestVersion *string `orm:"varchar(32) comment '最新版本号'" column:"latest_version" json:"LatestVersion"`

@@ -24,11 +24,11 @@ func (dao *WppService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQLS
 	}
 	return count, wpps, nil
 }
-func (dao *WppService) FindByWppId(wppId *string) *entity.Wpp {
+func (dao *WppService) FindById(id *string) *entity.Wpp {
 	var wpp entity.Wpp
 	sm := mysql.SELECT("*").
 		FROM(wpp, "w").
-		WHERE("w.wpp_id = ?", wppId).
+		WHERE("w.id = ?", id).
 		LIMIT(1)
 	dao.ExecuteSM(sm).ExtractorResultTo(&wpp)
 	return &wpp
@@ -55,7 +55,7 @@ func (dao *WppService) IsLatestVersion(wppId *string, version *string) (bool, *s
 	sm := mysql.SELECT_EXP_AS(mak.ExpStr("?>w.latest_version", version), "isLatest").
 		SELECT("w.latest_version").
 		FROM(entity.Wpp{}, "w").
-		WHERE("w.wpp_id = ?", wppId)
+		WHERE("w.id = ?", wppId)
 	var b bool
 	var s string
 	dao.ExecuteSM(sm).ExtractorResultSet(func(rs *sql.Rows) interface{} {
