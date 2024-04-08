@@ -55,14 +55,28 @@ func (*PurchasedWpp) TableName() string {
 	return "t_purchased_wpp"
 }
 
-type Wpp struct {
+type ReleaseNote struct {
 	entity.IdEntity
-	Name        *string `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
-	ReleaseNote *string `orm:"varchar(255) comment '发布日志'" column:"release_note" json:"releaseNote"`
-	Version     *string `orm:"varchar(32) comment '版本号'" column:"version" json:"version"`
 	WppId       *string `orm:"varchar(32) comment '应用ID'" column:"wpp_id" json:"wppId"`
+	Version     *string `orm:"varchar(32) comment '版本号'" column:"version" json:"version"`
+	ReleaseNote *string `orm:"varchar(255) comment '发布日志'" column:"release_note" json:"releaseNote"`
 	DeveloperId *string `orm:"varchar(32) comment '开发者ID'" column:"developer_id" json:"developerId"`
 	FileId      *string `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
+	entity.TimeEntity
+}
+
+func (*ReleaseNote) TableName() string {
+	return "t_wpp_release_note"
+}
+
+type Wpp struct {
+	entity.IdEntity
+	WppId         *string `orm:"varchar(32) comment '应用ID'" column:"wpp_id" json:"wppId"`
+	Name          *string `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
+	Manifest      *string `orm:"longtext comment '元数据'" column:"manifest" json:"manifest"`
+	LatestVersion *string `orm:"varchar(32) comment '最新版本号'" column:"latest_version" json:"LatestVersion"`
+	DeveloperId   *string `orm:"varchar(32) comment '开发者ID'" column:"developer_id" json:"developerId"`
+	FileId        *string `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
 	entity.TimeEntity
 }
 

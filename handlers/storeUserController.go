@@ -17,14 +17,16 @@ import (
 )
 
 type StoreUserController struct {
-	storeUserService *service.StoreUserService
-	wppService       *service.WppService
+	storeUserService   *service.StoreUserService
+	wppService         *service.WppService
+	releaseNoteService *service.ReleaseNoteService
 }
 
 func NewStoreUserController(app *gin.Engine) *StoreUserController {
 	ctrl := &StoreUserController{
-		storeUserService: service.NewStoreUserService(conf.Db),
-		wppService:       service.NewWppService(conf.Db),
+		storeUserService:   service.NewStoreUserService(conf.Db),
+		wppService:         service.NewWppService(conf.Db),
+		releaseNoteService: service.NewReleaseNoteService(conf.Db),
 	}
 	group := app.Group("/storeUser")
 	hds := []middlewares.Auth{
@@ -320,27 +322,49 @@ func (ctrl *StoreUserController) publish(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
-	user := userInfo.User
+	version := m["version"]
+	wppId := m["wppId"]
 	fileId := m["fileId"]
 	name := m["name"]
 	releaseNote := m["releaseNote"]
-	version := m["version"]
-	wppId := m["wppId"]
-	wpp := entity.Wpp{
-		Name:        &name,
-		WppId:       &wppId,
-		DeveloperId: user.Id,
-		FileId:      &fileId,
-		ReleaseNote: &releaseNote,
-		Version:     &version,
-	}
-	if !ctrl.wppService.IsLatestVersion(&wpp) {
-		msg.Error(ctx, "version is not latest")
+	if version == "" || wppId == "" || fileId == "" || name == "" || releaseNote == "" {
+		msg.Error(ctx, "param error")
 		return
+	}
+	if isLatestV, latestV := ctrl.wppService.IsLatestVersion(&wppId, &version); !isLatestV {
+		msg.Error(ctx, "version is not latest, latest version is "+*latestV)
+		return
+	}
+	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
+	user := userInfo.User
+	manifest := m["manifest"]
+	wpp := entity.Wpp{
+		WppId:         &wppId,
+		Name:          &name,
+		Manifest:      &manifest,
+		LatestVersion: &version,
+		DeveloperId:   user.Id,
+		FileId:        &fileId,
+	}
+	oldWpp := ctrl.wppService.FindByWppId(wpp.WppId)
+	if oldWpp.Id != nil {
+		wpp.Id = oldWpp.Id
 	}
 	r := ctrl.wppService.SaveUpdate(&wpp)
 	_, err := r.RowsAffected()
+	if err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	rNote := entity.ReleaseNote{
+		WppId:       &wppId,
+		Version:     &version,
+		ReleaseNote: &releaseNote,
+		DeveloperId: user.Id,
+		FileId:      &fileId,
+	}
+	r = ctrl.releaseNoteService.SaveUpdate(&rNote)
+	_, err = r.RowsAffected()
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
