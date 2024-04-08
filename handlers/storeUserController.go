@@ -17,16 +17,12 @@ import (
 )
 
 type StoreUserController struct {
-	storeUserService   *service.StoreUserService
-	wppService         *service.WppService
-	releaseNoteService *service.ReleaseNoteService
+	storeUserService *service.StoreUserService
 }
 
 func NewStoreUserController(app *gin.Engine) *StoreUserController {
 	ctrl := &StoreUserController{
-		storeUserService:   service.NewStoreUserService(conf.Db),
-		wppService:         service.NewWppService(conf.Db),
-		releaseNoteService: service.NewReleaseNoteService(conf.Db),
+		storeUserService: service.NewStoreUserService(conf.Db),
 	}
 	group := app.Group("/storeUser")
 	hds := []middlewares.Auth{
@@ -40,7 +36,6 @@ func NewStoreUserController(app *gin.Engine) *StoreUserController {
 		{Method: "POST", Group: "/storeUser", Path: "/delete", Auth: "#", Handler: ctrl.delete, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "GET", Group: "/storeUser", Path: "/current", Auth: "#", Handler: ctrl.currentStoreUser, AuthCheck: middlewares.StoreAuthCheck},
 		{Method: "GET", Group: "/storeUser", Path: "/logout", Auth: "#", Handler: ctrl.logout, AuthCheck: middlewares.StoreAuthCheck},
-		{Method: "POST", Group: "/storeUser", Path: "/publish", Auth: "#", Handler: ctrl.publish, AuthCheck: middlewares.StoreAuthCheck},
 	}
 	for i, hd := range hds {
 		middlewares.RegisterAuth(&hds[i])
@@ -315,62 +310,4 @@ func (ctrl *StoreUserController) logout(ctx *gin.Context) {
 	}
 	utils.DelFromRedis(SID)
 	msg.Ok(ctx, nil)
-}
-func (ctrl *StoreUserController) publish(ctx *gin.Context) {
-	var m map[string]string
-	if err := ctx.ShouldBindJSON(&m); err != nil {
-		msg.Error(ctx, err.Error())
-		return
-	}
-	version := m["version"]
-	wppId := m["wppId"]
-	fileId := m["fileId"]
-	name := m["name"]
-	releaseNote := m["releaseNote"]
-	if version == "" || wppId == "" || fileId == "" || name == "" || releaseNote == "" {
-		msg.Error(ctx, "param error")
-		return
-	}
-	if isLatestV, latestV := ctrl.wppService.IsLatestVersion(&wppId, &version); !isLatestV {
-		msg.Error(ctx, "version is not latest, latest version is "+*latestV)
-		return
-	}
-	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
-	user := userInfo.User
-	manifest := m["manifest"]
-	wpp := entity.Wpp{
-		Name:          &name,
-		Manifest:      &manifest,
-		LatestVersion: &version,
-		DeveloperId:   user.Id,
-		FileId:        &fileId,
-	}
-	wpp.Id = &wppId
-	oldWpp := ctrl.wppService.FindById(wpp.Id)
-	if oldWpp.Id != nil {
-		if *oldWpp.DeveloperId != *user.Id {
-			msg.Error(ctx, "you are not the owner")
-			return
-		}
-	}
-	r := ctrl.wppService.SaveUpdate(&wpp)
-	_, err := r.RowsAffected()
-	if err != nil {
-		msg.Error(ctx, err.Error())
-		return
-	}
-	rNote := entity.ReleaseNote{
-		WppId:       &wppId,
-		Version:     &version,
-		ReleaseNote: &releaseNote,
-		DeveloperId: user.Id,
-		FileId:      &fileId,
-	}
-	r = ctrl.releaseNoteService.SaveUpdate(&rNote)
-	_, err = r.RowsAffected()
-	if err != nil {
-		msg.Error(ctx, err.Error())
-		return
-	}
-	msg.Ok(ctx, "ok")
 }
