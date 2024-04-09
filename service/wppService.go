@@ -38,7 +38,12 @@ func (dao *WppService) SaveUpdate(wpp *entity.Wpp) sql.Result {
 		id := utils.UUID()
 		wpp.Id = &id
 	}
-	return dao.SaveOrUpdate(wpp)
+	return dao.SaveUpdateWithFilter(wpp, func(fieldName *string, columnName *string, v interface{}, im *mak.SQLIM) bool {
+		if utils.IsNil(v) {
+			return false
+		}
+		return true
+	})
 }
 func (dao *WppService) SaveUpdates(wpps []entity.Wpp) []sql.Result {
 	list := make([]interface{}, len(wpps))

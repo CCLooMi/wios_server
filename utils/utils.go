@@ -17,6 +17,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -325,8 +326,18 @@ func GenRandomNum(length int) string {
 	}
 	return string(result)
 }
+func IsNil(a interface{}) bool {
+	if a == nil {
+		return true
+	}
+	value := reflect.ValueOf(a)
+	if value.Kind() == reflect.Ptr {
+		return value.IsNil()
+	}
+	return false
+}
 func IsBlank(v interface{}) bool {
-	if v == nil {
+	if IsNil(v) {
 		return true
 	}
 	if str, ok := v.(string); ok && str != "" {
