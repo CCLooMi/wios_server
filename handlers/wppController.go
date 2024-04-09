@@ -55,7 +55,7 @@ func (ctrl *WppController) publish(ctx *gin.Context) {
 		return
 	}
 	if isLatestV, latestV := ctrl.wppService.IsLatestVersion(&wppId, &version); !isLatestV {
-		msg.Error(ctx, "version is not latest, latest version is "+*latestV)
+		msg.Error(ctx, version+" is not latest version,current latest version is "+*latestV)
 		return
 	}
 	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
