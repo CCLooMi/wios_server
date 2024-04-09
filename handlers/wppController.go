@@ -22,6 +22,7 @@ func NewWppController(app *gin.Engine) *WppController {
 	}
 	group := app.Group("/wpp")
 	hds := []middlewares.Auth{
+		{Method: "POST", Group: "/wpp", Path: "/topList", Handler: ctrl.topWpps},
 		{Method: "POST", Group: "/wpp", Path: "/byPage", Auth: "wpp.byPage", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/wpp", Path: "/publish", Auth: "#", Handler: ctrl.publish, AuthCheck: middlewares.StoreAuthCheck},
 	}
@@ -95,4 +96,25 @@ func (ctrl *WppController) publish(ctx *gin.Context) {
 		return
 	}
 	msg.Ok(ctx, "ok")
+}
+func (ctrl *WppController) topWpps(ctx *gin.Context) {
+	m := make(map[string]interface{})
+	if err := ctx.ShouldBindJSON(&m); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	t, ok := m["t"].(float64)
+	if !ok {
+		t = 0
+	}
+	limit, ok := m["limit"].(float64)
+	if !ok {
+		limit = 30
+	}
+	q, ok := m["q"].(string)
+	if !ok {
+		q = ""
+	}
+	wpps := ctrl.wppService.TopWpps(q, int(t), int(limit))
+	msg.Ok(ctx, wpps)
 }

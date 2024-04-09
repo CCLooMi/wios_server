@@ -71,11 +71,14 @@ func (*ReleaseNote) TableName() string {
 
 type Wpp struct {
 	entity.IdEntity
-	Name          *string `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
-	Manifest      *string `orm:"longtext comment '元数据'" column:"manifest" json:"manifest"`
-	LatestVersion *string `orm:"varchar(32) comment '最新版本号'" column:"latest_version" json:"LatestVersion"`
-	DeveloperId   *string `orm:"varchar(32) comment '开发者ID'" column:"developer_id" json:"developerId"`
-	FileId        *string `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
+	Name          *string  `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
+	Manifest      *string  `orm:"longtext comment '元数据'" column:"manifest" json:"manifest"`
+	LatestVersion *string  `orm:"varchar(32) comment '最新版本号'" column:"latest_version" json:"LatestVersion"`
+	DeveloperId   *string  `orm:"varchar(32) comment '开发者ID'" column:"developer_id" json:"developerId"`
+	FileId        *string  `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
+	DownloadCount *int     `orm:"int comment '下载次数'" column:"download_count" json:"downloadCount" insertExp:"IFNULL(?,0)"`
+	Rating        *float32 `orm:"float comment '评分'" column:"rating" json:"rating" insertExp:"IFNULL(?,5)"`
+	CommentCount  *int     `orm:"int comment '评论数'" column:"comment_count" json:"commentCount" insertExp:"IFNULL(?,0)"`
 	entity.TimeEntity
 }
 

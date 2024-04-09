@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"wios_server/conf"
 	"wios_server/handlers"
+	"wios_server/middlewares"
 )
 
 func main() {
 	setLog()
 	app := gin.Default()
+	middlewares.UseJsoniter(app)
 	defer conf.Db.Close()
 	defer conf.Rdb.Close()
 	handlers.RegisterHandlers(app)

@@ -71,3 +71,23 @@ func (dao *WppService) IsLatestVersion(wppId *string, version *string) (bool, *s
 	})
 	return b, &s
 }
+
+func (dao *WppService) TopWpps(q string, t int, limit int) []map[string]interface{} {
+	sm := mysql.SELECT("*").
+		FROM(entity.Wpp{}, "w")
+	if q != "" {
+		sm.WHERE("w.name LIKE ?", "%"+q+"%")
+	}
+	switch t {
+	case 0:
+		sm.ORDER_BY("w.download_count DESC")
+	case 1:
+		sm.ORDER_BY("w.rating DESC")
+	case 2:
+		sm.ORDER_BY("w.comment_count DESC")
+	case 3:
+		sm.ORDER_BY("w.updated_at DESC")
+	}
+	sm.LIMIT(limit)
+	return dao.ExecuteSM(sm).GetResultAsMapList()
+}
