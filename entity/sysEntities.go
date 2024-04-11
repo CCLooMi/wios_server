@@ -15,6 +15,7 @@ type Menu struct {
 	Idx      *int    `orm:"int comment '层级深度'" column:"idx" json:"idx"`
 	Position *int    `orm:"int comment '位置'" column:"position" json:"position"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*Menu) TableName() string {
@@ -26,6 +27,7 @@ type Org struct {
 	Name        *string `orm:"varchar(255) comment '组织名称'" column:"name" json:"name"`
 	Description *string `orm:"varchar(255) comment '组织描述'" column:"description" json:"description"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*Org) TableName() string {
@@ -37,6 +39,7 @@ type OrgUser struct {
 	UserID *string `orm:"varchar(32) comment '用户ID'" column:"user_id" json:"userID"`
 	OrgID  *string `orm:"varchar(32) comment '组织ID'" column:"org_id" json:"orgID"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*OrgUser) TableName() string {
@@ -49,6 +52,7 @@ type Role struct {
 	Code        *string `orm:"varchar(64); not null comment '角色编码'" column:"code" json:"code"`
 	Description *string `orm:"varchar(255) comment '角色描述'" column:"description" json:"description"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*Role) TableName() string {
@@ -60,6 +64,7 @@ type RoleMenu struct {
 	RoleId *string `orm:"varchar(32) comment '角色ID'" column:"role_id" json:"roleId"`
 	MenuId *string `orm:"varchar(32) comment '视图ID'" column:"menu_id" json:"menuId"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*RoleMenu) TableName() string {
@@ -71,6 +76,7 @@ type RolePermission struct {
 	RoleId       *string `orm:"varchar(32) comment '角色ID'" column:"role_id" json:"roleId"`
 	PermissionId *string `orm:"varchar(40) comment '权限ID'" column:"permission_id" json:"permissionId"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*RolePermission) TableName() string {
@@ -82,6 +88,7 @@ type RoleUser struct {
 	UserId *string `orm:"varchar(32) comment '用户ID'" column:"user_id" json:"userId"`
 	RoleId *string `orm:"varchar(32) comment '角色ID'" column:"role_id" json:"roleId"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*RoleUser) TableName() string {
@@ -109,6 +116,7 @@ type User struct {
 	Password string `orm:"varchar(64); not null comment '用户密码'" column:"password" json:"password"`
 	Seed     []byte `orm:"binary(8); not null comment '密码种子'" column:"seed" json:"seed"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*User) TableName() string {
@@ -136,6 +144,7 @@ type Config struct {
 	Value     *string `orm:"longtext comment '配置值'" column:"value" json:"value"`
 	ValueType *string `orm:"varchar(128) comment '值类型'" column:"value_type" json:"valueType"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*Config) TableName() string {

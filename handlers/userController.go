@@ -76,6 +76,14 @@ func (ctrl *UserController) saveUpdate(ctx *gin.Context) {
 			}
 		}
 	}
+	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	user.UpdatedBy = userInfo.User.Id
+	if user.InsertedBy == nil {
+		user.InsertedBy = userInfo.User.Id
+	}
+	if user.UpdatedAt != nil {
+		user.UpdatedAt = nil
+	}
 	var rs = ctrl.userService.SaveUpdateWithFilter(&user,
 		func(fieldName *string, columnName *string, v interface{}, im *mak.SQLIM) bool {
 			if utils.IsBlank(v) {
@@ -88,7 +96,6 @@ func (ctrl *UserController) saveUpdate(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
 	if *userInfo.User.Id == *user.Id {
 		userInfo.User = &user
 		utils.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
@@ -238,16 +245,12 @@ func (ctrl *UserController) initRootUser(ctx *gin.Context) {
 		Nickname: "Super Admin",
 		Password: "apple",
 	}
-	if user.Id == nil {
-		if ctrl.userService.CheckExist(&entity.User{Username: user.Username}) {
-			msg.Ok(ctx, "root user already exists")
-			return
-		}
+	if ctrl.userService.CheckExist(&user) {
+		msg.Ok(ctx, "root user already exists")
+		return
 	}
-	if user.Seed == nil {
-		user.Seed = utils.RandomBytes(8)
-		user.Password = utils.SHA256(user.Username, user.Password, user.Seed)
-	}
+	user.Seed = utils.RandomBytes(8)
+	user.Password = utils.SHA256(user.Username, user.Password, user.Seed)
 	var rs = ctrl.userService.SaveUpdate(&user)
 	_, err := rs.RowsAffected()
 	if err != nil {

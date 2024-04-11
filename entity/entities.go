@@ -22,6 +22,7 @@ type Category struct {
 	Description *string `orm:"varchar(255) comment '分类描述'" column:"description" json:"description"`
 	Order       *int    `orm:"int; default:0 comment '分类排序'" column:"order" json:"order"`
 	entity.TimeEntity
+	entity.AuditEntity
 }
 
 func (*Category) TableName() string {
@@ -71,14 +72,17 @@ func (*ReleaseNote) TableName() string {
 
 type Wpp struct {
 	entity.IdEntity
-	Name          *string  `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
-	Manifest      *string  `orm:"longtext comment '元数据'" column:"manifest" json:"manifest"`
-	LatestVersion *string  `orm:"varchar(32) comment '最新版本号'" column:"latest_version" json:"LatestVersion"`
-	DeveloperId   *string  `orm:"varchar(32) comment '开发者ID'" column:"developer_id" json:"developerId"`
-	FileId        *string  `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
-	DownloadCount *int     `orm:"int comment '下载次数'" column:"download_count" json:"downloadCount" insertExp:"IFNULL(?,0)"`
-	Rating        *float32 `orm:"float comment '评分'" column:"rating" json:"rating" insertExp:"IFNULL(?,5)"`
-	CommentCount  *int     `orm:"int comment '评论数'" column:"comment_count" json:"commentCount" insertExp:"IFNULL(?,0)"`
+	Name           *string  `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
+	Manifest       *string  `orm:"longtext comment '元数据'" column:"manifest" json:"manifest"`
+	LatestVersion  *string  `orm:"varchar(32) comment '最新版本号'" column:"latest_version" json:"LatestVersion"`
+	DeveloperId    *string  `orm:"varchar(32) comment '开发者ID'" column:"developer_id" json:"developerId"`
+	FileId         *string  `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
+	Price          *int64   `orm:"bigint comment '价格'" column:"price" json:"price" insertExp:"IFNULL(?,0)"`
+	CurrencySymbol *string  `orm:"varchar(9) comment '货币符号'" column:"currency_symbol" json:"currencySymbol" insertExp:"IFNULL(?,'¥')"`
+	CurrencyCode   *string  `orm:"varchar(3) comment '货币编码'" column:"currency_code" json:"currencyCode" insertExp:"IFNULL(?,'CNY')"`
+	DownloadCount  *int     `orm:"int comment '下载次数'" column:"download_count" json:"downloadCount" insertExp:"IFNULL(?,0)"`
+	Rating         *float32 `orm:"float comment '评分'" column:"rating" json:"rating" insertExp:"IFNULL(?,5)"`
+	CommentCount   *int     `orm:"int comment '评论数'" column:"comment_count" json:"commentCount" insertExp:"IFNULL(?,0)"`
 	entity.TimeEntity
 }
 

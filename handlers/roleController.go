@@ -54,6 +54,14 @@ func (ctrl *RoleController) saveUpdate(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
+	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	role.UpdatedBy = userInfo.User.Id
+	if role.InsertedBy == nil {
+		role.InsertedBy = userInfo.User.Id
+	}
+	if role.UpdatedAt != nil {
+		role.UpdatedAt = nil
+	}
 	var rs = ctrl.roleService.SaveUpdate(&role)
 	_, err := rs.RowsAffected()
 	if err != nil {

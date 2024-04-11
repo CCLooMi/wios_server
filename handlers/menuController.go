@@ -46,6 +46,14 @@ func (ctrl *MenuController) saveUpdate(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
+	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	menu.UpdatedBy = userInfo.User.Id
+	if menu.InsertedBy == nil {
+		menu.InsertedBy = userInfo.User.Id
+	}
+	if menu.UpdatedAt != nil {
+		menu.UpdatedAt = nil
+	}
 	var rs = ctrl.menuService.SaveUpdate(&menu)
 	_, err := rs.RowsAffected()
 	if err != nil {
@@ -97,7 +105,11 @@ func (ctrl *MenuController) initMenus(ctx *gin.Context) {
 		return
 	}
 	interfaceMenus := make([]interface{}, len(menus))
+	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	uid := userInfo.User.Id
 	for i, menu := range menus {
+		menu.InsertedBy = uid
+		menu.UpdatedBy = uid
 		interfaceMenus[i] = menu
 	}
 	ctrl.menuService.BatchSaveUpdate(interfaceMenus...)

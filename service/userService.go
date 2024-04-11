@@ -39,6 +39,10 @@ func (dao *UserService) SaveUpdate(user *entity.User) sql.Result {
 		user.Id = new(string)
 		*user.Id = utils.UUID()
 	}
+	if user.InsertedBy == nil {
+		user.InsertedBy = user.Id
+		user.UpdatedBy = user.Id
+	}
 	return dao.SaveOrUpdate(user)
 }
 

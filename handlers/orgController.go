@@ -43,6 +43,14 @@ func (ctrl *OrgController) saveUpdate(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
+	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	org.UpdatedBy = userInfo.User.Id
+	if org.InsertedBy == nil {
+		org.InsertedBy = userInfo.User.Id
+	}
+	if org.UpdatedAt != nil {
+		org.UpdatedAt = nil
+	}
 	var rs = ctrl.orgService.SaveUpdate(&org)
 	_, err := rs.RowsAffected()
 	if err != nil {

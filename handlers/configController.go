@@ -42,6 +42,14 @@ func (ctrl *ConfigController) saveUpdate(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
+	userInfo := ctx.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	config.UpdatedBy = userInfo.User.Id
+	if config.InsertedBy == nil {
+		config.InsertedBy = userInfo.User.Id
+	}
+	if config.UpdatedAt != nil {
+		config.UpdatedAt = nil
+	}
 	var rs = ctrl.configService.SaveUpdate(&config)
 	_, err := rs.RowsAffected()
 	if err != nil {

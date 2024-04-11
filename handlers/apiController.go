@@ -240,6 +240,9 @@ func getStrDecode(name string) *encoding.Decoder {
 	}
 	return unicode.UTF8.NewDecoder()
 }
+
+const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+
 func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
 	var opts map[string]interface{}
 	if len(o) > 0 {
@@ -247,20 +250,21 @@ func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
 	} else {
 		opts = map[string]interface{}{}
 	}
-	method, methodExists := opts["method"].(string)
-	if !methodExists || method == "" {
+	method, ok := opts["method"].(string)
+	if !ok {
 		method = "GET"
 	}
 	var body string
-	if bodyInterface, bodyExists := opts["body"]; bodyExists {
+	if bodyInterface, ok := opts["body"]; ok {
 		body = bodyInterface.(string)
 	}
 	req, err := http.NewRequest(method, url, bytes.NewBufferString(body))
 	if err != nil {
 		return nil, err
 	}
-	headers, headersExist := opts["headers"].(map[string]interface{})
-	if headersExist {
+	req.Header.Set("User-Agent", userAgent)
+	headers, ok := opts["headers"].(map[string]interface{})
+	if ok {
 		for k, v := range headers {
 			req.Header.Set(k, v.(string))
 		}
@@ -375,15 +379,13 @@ func (ctrl *ApiController) saveUpdate(c *gin.Context) {
 		msg.Error(c, err)
 		return
 	}
-	userInfo, ok := c.Get("userInfo")
-	if !ok {
-		msg.Error(c, "userInfo not found")
-		return
+	userInfo := c.MustGet(middlewares.UserInfoKey).(*middlewares.UserInfo)
+	api.UpdatedBy = userInfo.User.Id
+	if api.InsertedBy == nil {
+		api.InsertedBy = userInfo.User.Id
 	}
-	userId := userInfo.(*middlewares.UserInfo).User.Id
-	api.UpdatedBy = userId
-	if api.CreatedBy == nil {
-		api.CreatedBy = userId
+	if api.UpdatedAt != nil {
+		api.UpdatedAt = nil
 	}
 	var rs = ctrl.apiService.SaveUpdate(&api)
 	_, err := rs.RowsAffected()
@@ -407,8 +409,8 @@ func (ctrl *ApiController) saveUpdates(c *gin.Context) {
 	userId := userInfo.(*middlewares.UserInfo).User.Id
 	for i := 0; i < len(apis); i++ {
 		apis[i].UpdatedBy = userId
-		if apis[i].CreatedBy == nil {
-			apis[i].CreatedBy = userId
+		if apis[i].InsertedBy == nil {
+			apis[i].InsertedBy = userId
 		}
 	}
 	var rs = ctrl.apiService.SaveUpdates(apis)

@@ -1,10 +1,50 @@
-id,desc,script,type,category,status,inserted_at,updated_at,created_by,updated_by
+id,desc,script,type,category,status,inserted_at,updated_at,inserted_by,updated_by
+40abf772c8c670033e6704713272f67d,Template test,"var ts = sysCfg[""code.verify.template""];
+var a = template.Apply(ts,{code:989890,year:2024});
+if(a[1]){
+    msgError(a[1]);
+}else{
+    var e = sendEmail(""Verification Code From WiOS Group"",a[0],""seemie@wios.cloud"");
+    if(e){
+        msgError(e);
+    }else{
+        msgOk('ok');
+    }
+}
+false;",,,,2024-04-01T09:41:47+08:00,2024-04-11T10:53:43+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+56211d61b793aa16e7d6fa98fe3a8ba7,World flag,"var url = ""https://www.ifreesite.com/world/"";
+var a = fetch(url);
+var q=""#area-zone #area-zone-space"";
+var doc = $(a.response);
+if(doc==null){
+    false;
+}else{
+    var data= {};
+    var eles = doc.Find(q);
+    var L=eles.Length();
+    for(var i=0;i<L;i++){
+        var ei = eles.Eq(i);
+        getFlagInfo(ei,data);
+    }
+    data;
+}
+function getFlagInfo(d,data){
+    var es = d.Children();
+    var L = es.Length();
+    var t = es.Eq(0);
+    var flags = [];
+    for(var i=1;i<L;i++){
+        var di = es.Eq(i);
+        flags.push(di.Text().trim());
+    }
+    data[t.Text().trim()]=flags;
+}",,script,,2024-04-10T16:32:26+08:00,2024-04-11T10:53:47+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 ac60584a5c9a432dd1881cd6501c0bd9,系统配置查询,"var data = sql.SELECT(""c.value"")
     .FROM(""sys_config"", ""c"")
     .WHERE(""c.name=?"", args[0])
     .Execute(db)
     .GetResultAsList();
-JSON.parse(data);",,,,2024-03-28T19:08:34+08:00,2024-03-28T19:08:34+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+JSON.parse(data);",,,,2024-03-28T19:08:34+08:00,2024-04-11T10:53:52+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 c4abb167ea8395cfd0dded69a9736932,海关编码分页查询,"byPage(function (sm, opts) {
     sm.SELECT(""*"")
     .FROM(""hs_info"",""h"")
@@ -13,4 +53,37 @@ c4abb167ea8395cfd0dded69a9736932,海关编码分页查询,"byPage(function (sm, 
         sm.WHERE(""h.name LIKE ? OR h.detail LIKE ?"",k,k);
     }
 });
-false;",,,,2024-03-28T18:32:53+08:00,2024-03-28T18:32:53+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+false;",,,,2024-03-28T18:32:53+08:00,2024-04-11T10:53:54+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+f4670379cd150a73ede8b125be44251f,Fetch currency info,"var url = ""https://www.ifreesite.com/currency.htm"";
+var a = fetch(url);
+var q="".tooltext> div.if_titlename,table.if_tabletd>tbody tbody"";
+var doc = $(a.response);
+if(doc==null){
+    false;
+}else{
+    var data= {};
+    var eles = doc.Find(q);
+    var L=eles.Length();
+    for(var i=0;i<L;i+=2){
+        var t = eles.Eq(i);
+        var d = eles.Eq(i+1);
+        data[t.Text()]=getCurrencyInfo(d);
+    }
+    data;
+}
+function getCurrencyInfo(d){
+    var infos = [];
+    var trs = d.Find(""tr"");
+    var L = trs.Length();
+    for(var i=1;i<L;i++){
+        var tds = trs.Eq(i).Find(""td"");
+        var LL = tds.Length();
+        var a = [];
+        for(var j=0;j<LL;j++){
+            var tdj = tds.Eq(j);
+            a.push(tdj.Text().trim());
+        }
+        infos.push(a);
+    }
+    return infos;
+}",,script,,2024-04-10T10:54:22+08:00,2024-04-11T10:53:57+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
