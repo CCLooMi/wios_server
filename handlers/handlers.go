@@ -19,6 +19,8 @@ func RegisterHandlers(app *gin.Engine) {
 	NewConfigController(app)
 	NewStoreUserController(app)
 	NewWppController(app)
+	NewWppEventController(app)
+	NewWppStoryController(app)
 	CorsRevertServer(app)
 	ServerStaticDir(app)
 }
