@@ -25,6 +25,15 @@ func (dao *BaseDao) FindBySM(sm *mak.SQLSM, out interface{}) {
 func (dao *BaseDao) ExecuteSM(sm *mak.SQLSM) *mak.MySQLSMExecutor {
 	return sm.Execute(dao.db)
 }
+func (dao *BaseDao) ExecuteUm(um *mak.SQLUM) *mak.MySQLUMExecutor {
+	return um.Execute(dao.db)
+}
+func (dao *BaseDao) ExecuteDM(dm *mak.SQLDM) *mak.MySQLDMExecutor {
+	return dm.Execute(dao.db)
+}
+func (dao *BaseDao) ExecuteIM(im *mak.SQLIM) *mak.MySQLIMExecutor {
+	return im.Execute(dao.db)
+}
 
 func (dao *BaseDao) ById(id interface{}, out interface{}) {
 	sm := mysql.SELECT("*").FROM(out, "e").WHERE("e.id = ?", id).LIMIT(1)

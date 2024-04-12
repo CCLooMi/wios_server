@@ -105,3 +105,29 @@ type StoreUser struct {
 func (*StoreUser) TableName() string {
 	return "t_store_user"
 }
+
+type WppStory struct {
+	entity.IdEntity
+	Content *string `orm:"longtext comment '故事内容'" column:"content" json:"content"`
+	Status  *string `orm:"varchar(10) comment '状态：active,inactive,draft,archived,deleted,scheduled'" column:"status" json:"status"`
+	entity.TimeEntity
+	entity.AuditEntity
+}
+
+func (*WppStory) TableName() string {
+	return "t_wpp_story"
+}
+
+type WppEvent struct {
+	entity.IdEntity
+	Content   *string    `orm:"longtext comment '活动内容'" column:"content" json:"content"`
+	StartDate *time.Time `orm:"datetime comment '开始时间'" column:"start_date" json:"startDate"`
+	EndDate   *time.Time `orm:"datetime comment '结束时间'" column:"end_date" json:"endDate"`
+	Status    *string    `orm:"varchar(10) comment '状态：active,inactive,draft,archived,deleted,scheduled'" column:"status" json:"status"`
+	entity.TimeEntity
+	entity.AuditEntity
+}
+
+func (*WppEvent) TableName() string {
+	return "t_wpp_event"
+}
