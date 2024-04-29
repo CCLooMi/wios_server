@@ -34,7 +34,8 @@ func NewWppStoryController(app *gin.Engine) *WppStoryController {
 func (ctrl *WppStoryController) byPage(c *gin.Context) {
 	middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {
 		return ctrl.wppStoryService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
-			sm.SELECT("*").FROM(entity.WppStory{}, "ws")
+			sm.SELECT("*").FROM(entity.WppStory{}, "ws").
+				ORDER_BY("ws.updated_at DESC")
 		})
 	})
 }
