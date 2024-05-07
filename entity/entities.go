@@ -120,6 +120,7 @@ func (*WppStory) TableName() string {
 
 type WppEvent struct {
 	entity.IdEntity
+	WppId     *string    `orm:"varchar(32) comment '应用ID'" column:"wpp_id" json:"wppId"`
 	Content   *string    `orm:"longtext comment '活动内容'" column:"content" json:"content"`
 	StartDate *time.Time `orm:"datetime comment '开始时间'" column:"start_date" json:"startDate"`
 	EndDate   *time.Time `orm:"datetime comment '结束时间'" column:"end_date" json:"endDate"`
