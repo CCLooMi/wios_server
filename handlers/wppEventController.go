@@ -34,7 +34,8 @@ func NewWppEventController(app *gin.Engine) *WppEventController {
 func (ctrl *WppEventController) byPage(ctx *gin.Context) {
 	middlewares.ByPage(ctx, func(page *middlewares.Page) (int64, any, error) {
 		return ctrl.wppEventSercie.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
-			sm.SELECT("*").FROM(entity.WppEvent{}, "we")
+			sm.SELECT("*").FROM(entity.WppEvent{}, "we").
+				ORDER_BY("we.updated_at DESC")
 		})
 	})
 }
