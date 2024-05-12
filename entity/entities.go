@@ -74,7 +74,7 @@ type Wpp struct {
 	entity.IdEntity
 	Name           *string  `orm:"varchar(64) comment '应用名称'" column:"name" json:"name"`
 	Manifest       *string  `orm:"longtext comment '元数据'" column:"manifest" json:"manifest"`
-	LatestVersion  *string  `orm:"varchar(32) comment '最新版本号'" column:"latest_version" json:"LatestVersion"`
+	LatestVersion  *string  `orm:"varchar(32) comment '最新版本号'" column:"latest_version" json:"latestVersion"`
 	DeveloperId    *string  `orm:"varchar(32) comment '开发者ID'" column:"developer_id" json:"developerId"`
 	FileId         *string  `orm:"varchar(64) comment '文件ID'" column:"file_id" json:"fileId"`
 	Price          *int64   `orm:"bigint comment '价格'" column:"price" json:"price" insertExp:"IFNULL(?,0)"`
