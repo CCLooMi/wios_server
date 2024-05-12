@@ -37,7 +37,7 @@ func NewApiController(app *gin.Engine) *ApiController {
 	group := app.Group("/api")
 	hds := []middlewares.Auth{
 		{Method: "GET", Group: "/api", Path: "/stopVmById", Auth: "api.stopVmById", Handler: ctrl.stopVmById},
-		{Method: "GET", Group: "/api", Path: "/vms", Auth: "api.vms", Handler: ctrl.vms},
+		{Method: "POST", Group: "/api", Path: "/vms", Auth: "api.vms", Handler: ctrl.vms},
 		{Method: "POST", Group: "/api", Path: "/execute", Auth: "api.execute", Handler: ctrl.execute},
 		{Method: "POST", Group: "/api", Path: "/executeById", Auth: "api.executeById", Handler: ctrl.executeById},
 		{Method: "POST", Group: "/api", Path: "/byPage", Auth: "api.list", Handler: ctrl.byPage},
@@ -301,7 +301,19 @@ func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
 }
 
 func (ctrl *ApiController) vms(c *gin.Context) {
-	msg.Ok(c, vmMap)
+	//msg.Ok(c, vmMap)
+	data := make([]interface{}, 0)
+	for k, v := range vmMap {
+		data = append(data, map[string]interface{}{
+			"id":    k,
+			"title": v.Title,
+			"user":  v.User.Nickname,
+		})
+	}
+	msg.Ok(c, map[string]interface{}{
+		"data":  data,
+		"total": len(data),
+	})
 }
 func (ctrl *ApiController) stopVmById(c *gin.Context) {
 	vmId := c.Query("id")
