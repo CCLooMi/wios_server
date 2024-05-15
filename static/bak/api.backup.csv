@@ -1,4 +1,9 @@
 id,desc,script,type,category,status,inserted_at,updated_at,inserted_by,updated_by
+21dd8b2f7d1062d6ab08af557e3e391f,loop,"self.Title=""Loop""
+while(true){
+    console.log(""Task running!""+new Date())
+    sleep(1000)
+}",,script,,2024-05-12T21:12:25+08:00,2024-05-15T19:17:49+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 40abf772c8c670033e6704713272f67d,Template test,"var ts = sysCfg[""code.verify.template""];
 var a = template.Apply(ts,{code:989890,year:2024});
 if(a[1]){
@@ -45,6 +50,25 @@ ac60584a5c9a432dd1881cd6501c0bd9,系统配置查询,"var data = sql.SELECT(""c.v
     .Execute(db)
     .GetResultAsList();
 JSON.parse(data);",,,,2024-03-28T19:08:34+08:00,2024-04-11T10:53:52+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+be0d1312ddf59a4b0864b91277b76900,银联国际汇率查询,"
+var url = getUrl(0);
+var rsp = fetch(url,{method:""GET""});
+if(rsp.statusCode===404){
+    url = getUrl(-1);
+    rsp = fetch(url,{method:""GET""});
+}
+var a = JSON.parse(rsp.response);
+a;
+function getUrl(nd){
+    var d= new Date();
+    return ""https://m.unionpayintl.com/jfimg/""+fdate(d,nd)+"".json"";
+}
+function fdate(d,nd){
+    return d.getFullYear()+fv(d.getMonth()+1)+fv(d.getDate()+nd);
+}
+function fv(v){
+    return ('0' + v).slice(-2);
+}",,api,,2024-05-13T22:36:52+08:00,2024-05-15T09:45:13+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 c4abb167ea8395cfd0dded69a9736932,海关编码分页查询,"byPage(function (sm, opts) {
     sm.SELECT(""*"")
     .FROM(""hs_info"",""h"")
