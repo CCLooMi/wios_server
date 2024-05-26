@@ -13,18 +13,21 @@ import (
 type WppController struct {
 	wppService         *service.WppService
 	releaseNoteService *service.ReleaseNoteService
+	storeUserService   *service.StoreUserService
 }
 
 func NewWppController(app *gin.Engine) *WppController {
 	ctrl := &WppController{
 		wppService:         service.NewWppService(conf.Db),
 		releaseNoteService: service.NewReleaseNoteService(conf.Db),
+		storeUserService:   service.NewStoreUserService(conf.Db),
 	}
 	group := app.Group("/wpp")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/wpp", Path: "/topList", Handler: ctrl.topWpps},
 		{Method: "POST", Group: "/wpp", Path: "/byPage", Auth: "wpp.byPage", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/wpp", Path: "/publish", Auth: "#", Handler: ctrl.publish, AuthCheck: middlewares.StoreAuthCheck},
+		{Method: "POST", Group: "/wpp", Path: "/info", Handler: ctrl.getWppInfo},
 	}
 	for i, hd := range hds {
 		middlewares.RegisterAuth(&hds[i])
@@ -117,4 +120,46 @@ func (ctrl *WppController) topWpps(ctx *gin.Context) {
 	}
 	wpps := ctrl.wppService.TopWpps(q, int(t), int(limit))
 	msg.Ok(ctx, wpps)
+}
+func (ctrl *WppController) getWppInfo(ctx *gin.Context) {
+	m := []string{}
+	if err := ctx.ShouldBindJSON(&m); err != nil {
+		msg.Error(ctx, err.Error())
+		return
+	}
+	if len(m) == 0 {
+		msg.Ok(ctx, m)
+		return
+	}
+	if len(m) > 100 {
+		msg.Error(ctx, "too many ids")
+		return
+	}
+	storeUserInfo := middlewares.GetStoreUserInfo(ctx)
+	var result = make([]map[string]interface{}, 0)
+	for _, wppId := range m {
+		wpp := ctrl.wppService.FindById(&wppId)
+		if wpp.Id == nil {
+			result = append(result, nil)
+			continue
+		}
+		devUser, _ := ctrl.storeUserService.FindById(wpp.DeveloperId)
+		var owner, isLogin = false, false
+		if storeUserInfo != nil {
+			owner = ctrl.storeUserService.Owner(storeUserInfo.User.Id, wpp.Id)
+			isLogin = true
+		}
+		result = append(result, map[string]interface{}{
+			"manifest":  wpp.Manifest,
+			"fid":       wpp.FileId,
+			"latestV":   wpp.LatestVersion,
+			"owner":     owner,
+			"isLogin":   isLogin,
+			"devId":     devUser.Id,
+			"devName":   devUser.Nickname,
+			"devAvatar": devUser.Avatar,
+			"devEmail":  devUser.Email,
+		})
+	}
+	msg.Ok(ctx, result)
 }

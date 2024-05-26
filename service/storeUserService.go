@@ -56,3 +56,12 @@ func (dao *StoreUserService) CheckExist(e *entity.StoreUser) bool {
 		LIMIT(1)
 	return dao.ExecuteSM(sm).Count() > 0
 }
+
+func (dao *StoreUserService) Owner(userId *string, wppId *string) bool {
+	sm := mysql.SELECT("COUNT(1)").
+		FROM(entity.PurchasedWpp{}, "p").
+		WHERE("w.user_id = ?", userId).
+		AND("w.wpp_id = ?", wppId).
+		LIMIT(1)
+	return dao.ExecuteSM(sm).Count() > 0
+}

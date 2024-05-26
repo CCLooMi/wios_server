@@ -147,6 +147,18 @@ func StoreAuthCheck(c *gin.Context) {
 	c.Set(StoreUserInfoKey, &storeUserInfo)
 	c.Next()
 }
+func GetStoreUserInfo(c *gin.Context) *StoreUserInfo {
+	sid, err := c.Cookie(StoreSessionIDKey)
+	if err != nil {
+		return nil
+	}
+	var storeUserInfo = StoreUserInfo{}
+	err = utils.GetObjDataFromRedis(sid, &storeUserInfo)
+	if err != nil {
+		return nil
+	}
+	return &storeUserInfo
+}
 
 // checkPermission
 func checkPermission(userInfo *UserInfo, auth *Auth) bool {
