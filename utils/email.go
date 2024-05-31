@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"net/smtp"
 	"os"
 	"path"
@@ -149,6 +148,5 @@ func (s *MailSender) Send(msg Message) error {
 			return err
 		}
 	}
-	fmt.Println(buf.String())
 	return smtp.SendMail(s.Host+":"+s.Port, auth, msg.From, msg.To, buf.Bytes())
 }
