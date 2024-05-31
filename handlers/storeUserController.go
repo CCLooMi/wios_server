@@ -152,7 +152,7 @@ func (ctrl *StoreUserController) sendVerifyCodeEmail(ctx *gin.Context) {
 		return
 	}
 	email := info["email"]
-	err = utils.SendEmail("Verification Code From WiOS Group", &body, email)
+	err = utils.SendMail("Verification Code From WiOS Group", &body, email)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return

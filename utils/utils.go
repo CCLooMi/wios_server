@@ -13,7 +13,6 @@ import (
 	"html/template"
 	"math/big"
 	"net"
-	"net/smtp"
 	"os"
 	"path"
 	"path/filepath"
@@ -23,6 +22,10 @@ import (
 	"time"
 	"wios_server/conf"
 )
+
+func init() {
+	initMailSender()
+}
 
 // 生成随机ID
 func GenerateRandomID() string {
@@ -278,25 +281,7 @@ func BackupTableDataToCSV(tableName string, dir string, fileName string) error {
 	}
 	return nil
 }
-func SendEmail(subject string, body *string, to ...string) error {
-	emailCfg := conf.SysCfg["sys.email"].(map[string]interface{})
-	port, ok := emailCfg["smtpPort"].(float64)
-	if !ok {
-		port = 25
-	}
-	fromEmail := emailCfg["email"].(string)
-	password := emailCfg["password"].(string)
-	smptHost := emailCfg["smtp"].(string)
-	auth := smtp.PlainAuth("", fromEmail, password, smptHost)
-	msg := []byte(
-		"From: " + fromEmail + "\n" +
-			"To: " + strings.Join(to, ",") + "\n" +
-			"Subject: " + subject + "\n" +
-			"MIME-version: 1.0;\n" +
-			"Content-Type: text/html; charset=\"UTF-8\";\n\n" +
-			*body)
-	return smtp.SendMail(smptHost+":"+strconv.Itoa(int(port)), auth, fromEmail, to, msg)
-}
+
 func ApplyTemplate(text *string, name string, data any) (string, error) {
 	t := template.New(name)
 	_, err := t.Parse(*text)
@@ -344,4 +329,53 @@ func IsBlank(v interface{}) bool {
 		return false
 	}
 	return true
+}
+
+var mailSender *MailSender
+
+func initMailSender() {
+	emailCfg := conf.SysCfg["sys.email"].(map[string]interface{})
+	port, ok := emailCfg["smtpPort"].(float64)
+	if !ok {
+		port = 25
+	}
+	fromEmail := emailCfg["email"].(string)
+	username := emailCfg["username"].(string)
+	if username == "" {
+		username = fromEmail
+	}
+	password := emailCfg["password"].(string)
+	smptHost := emailCfg["smtp"].(string)
+	mailSender = &MailSender{
+		User: username,
+		Pwd:  password,
+		Host: smptHost,
+		Port: strconv.Itoa(int(port)),
+	}
+}
+
+func SendMail(subject string, body *string, to ...string) error {
+	return mailSender.Send(Message{
+		To:          to,
+		Subject:     subject,
+		Body:        *body,
+		ContentType: "text/html; charset=\"UTF-8\"",
+	})
+}
+func SendMailWithFiles(subject string, body *string, to []string, fs ...string) error {
+	atts := make([]Attachment, 0)
+	for i := 0; i < len(fs); i += 2 {
+		atts = append(atts, Attachment{
+			Fid:         fs[i],
+			Name:        fs[i+1],
+			ContentType: "application/octet-stream",
+		})
+	}
+	return mailSender.Send(Message{
+		To:          to,
+		Subject:     subject,
+		Body:        *body,
+		ContentType: "text/html; charset=\"UTF-8\"",
+		Attachments: atts,
+	})
 }
