@@ -115,9 +115,25 @@ func AuthCheck(c *gin.Context) {
 	c.Next()
 }
 
+func GetUserInfo(c *gin.Context) *UserInfo {
+	sid, err := c.Cookie(UserSessionIDKey)
+	if err != nil {
+		return nil
+	}
+	var userInfo = UserInfo{}
+	err = utils.GetObjDataFromRedis(sid, &userInfo)
+	if err != nil {
+		return nil
+	}
+	return &userInfo
+}
+
 const StoreUserInfoKey = "storeUserInfo"
 const StoreSessionIDKey = "SID"
 
+func GetStoreSessionId(c *gin.Context) (string, error) {
+	return c.Cookie(StoreSessionIDKey)
+}
 func StoreAuthCheck(c *gin.Context) {
 	path := c.Request.URL.Path
 	auth := authMap[path]

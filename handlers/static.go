@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 	"wios_server/conf"
+	"wios_server/middlewares"
+	"wios_server/service"
 	"wios_server/utils"
 )
 
@@ -16,6 +18,7 @@ func ServerStaticDir(app *gin.Engine) {
 }
 
 func ServerUploadFile(app *gin.Engine) {
+	wppServ := service.NewWppService(conf.Db)
 	app.GET("/upload/:fileId", func(ctx *gin.Context) {
 		fileId := ctx.Param("fileId")
 		filePath := getRealPath(fileId)
@@ -23,6 +26,23 @@ func ServerUploadFile(app *gin.Engine) {
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			ctx.String(http.StatusNotFound, "File not found")
 			return
+		}
+		// check if file is wpp
+		if wppServ.IsWpp(&fileId) {
+			stUser := middlewares.GetStoreUserInfo(ctx)
+			if stUser == nil {
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"message": "Unauthorized",
+				})
+				return
+			}
+			// check if user has own wpp
+			if !wppServ.CheckPurchased(&fileId, stUser.User.Id) {
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"message": "Forbidden",
+				})
+				return
+			}
 		}
 		ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileId))
 		// response file data

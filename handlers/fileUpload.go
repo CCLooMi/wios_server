@@ -15,6 +15,7 @@ import (
 	"unsafe"
 	"wios_server/conf"
 	"wios_server/entity"
+	"wios_server/middlewares"
 	"wios_server/service"
 	"wios_server/utils"
 )
@@ -306,16 +307,21 @@ func HandleFileUpload(app *gin.Engine) {
 	path := conf.Cfg.FileServer.Path
 	uploadServer := service.NewUploadService(conf.Db)
 	app.GET(path, func(c *gin.Context) {
+		// 获取客户端发送的协议参数
+		protocols := c.Request.Header["Sec-Websocket-Protocol"]
 		// 升级HTTP连接为WebSocket连接
 		upgrader := websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
-				//允许所有来源
-				return true
+				if len(protocols) > 0 && "wstore" == protocols[0] {
+					return middlewares.GetStoreUserInfo(c) != nil
+				}
+				return middlewares.GetUserInfo(c) != nil
 			},
+			Subprotocols: []string{"wstore"},
 		}
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
-			log.Println("Failed to upgrade connection to WebSocket:", err)
+			http.Error(c.Writer, err.Error(), http.StatusUnauthorized)
 			return
 		}
 		address := int64(uintptr(unsafe.Pointer(conn)))

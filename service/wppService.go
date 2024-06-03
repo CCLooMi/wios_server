@@ -96,3 +96,51 @@ func (dao *WppService) TopWpps(q string, t int, limit int) []map[string]interfac
 	sm.LIMIT(limit)
 	return dao.ExecuteSM(sm).GetResultAsMapList()
 }
+
+func (dao *WppService) IsWpp(fid *string) bool {
+	sm := mysql.SELECT().
+		FROM(&entity.ReleaseNote{}, "rn").
+		WHERE("rn.file_id = ?", fid).
+		LIMIT(1)
+	return dao.ExecuteSM(sm).Count() > 0
+}
+func (dao *WppService) PurchaseWpp(wppId *string, userId *string, forcePurchase bool) sql.Result {
+	sm := mysql.
+		SELECT_EXP_AS(mak.ExpStr("IFNULL(tw.id,REPLACE(UUID(), '-', ''))"), "id").
+		SELECT_AS("su.id", "wpp_id").
+		SELECT_AS("w.id", "wpp_id").
+		SELECT("w.price").
+		SELECT_AS("NOW()", "purchase_time").
+		SELECT_AS("NOW()", "inserted_at").
+		SELECT_AS("NOW()", "updated_at").
+		FROM(&entity.Wpp{}, "w").
+		LEFT_JOIN(&entity.StoreUser{}, "su", "su.id=?", userId).
+		LEFT_JOIN(&entity.PurchasedWpp{}, "tw", "(tw.user_id = u.id AND tw.wpp_id = w.id)").
+		WHERE("w.id = ?", wppId).
+		AND("su.id IS NOT NULL")
+	if !forcePurchase {
+		sm.AND("w.price=0")
+	}
+	return dao.ExecuteIM(
+		mysql.INSERT_INTO(&entity.PurchasedWpp{}).
+			VALUES_SM(sm).
+			ON_DUPLICATE_KEY_UPDATE().
+			SET("updated_at = VALUES(updated_at)"),
+	).Update()
+}
+
+func (dao *WppService) CheckPurchased(wppId *string, userId *string) bool {
+	r := dao.PurchaseWpp(wppId, userId, false)
+	c, err := r.RowsAffected()
+	if err != nil {
+		return false
+	}
+	if c > 0 {
+		return true
+	}
+	sm := mysql.SELECT().
+		FROM(&entity.PurchasedWpp{}, "p").
+		WHERE("p.user_id = ?", userId).
+		AND("w.wpp_id = ?", wppId)
+	return dao.ExecuteSM(sm).Count() > 0
+}
