@@ -97,12 +97,22 @@ func (dao *WppService) TopWpps(q string, t int, limit int) []map[string]interfac
 	return dao.ExecuteSM(sm).GetResultAsMapList()
 }
 
-func (dao *WppService) IsWpp(fid *string) bool {
-	sm := mysql.SELECT().
+func (dao *WppService) IsWpp(fid *string) *string {
+	sm := mysql.SELECT("rn.wpp_id").
 		FROM(&entity.ReleaseNote{}, "rn").
 		WHERE("rn.file_id = ?", fid).
 		LIMIT(1)
-	return dao.ExecuteSM(sm).Count() > 0
+	var s string
+	dao.ExecuteSM(sm).ExtractorResultSet(func(rs *sql.Rows) interface{} {
+		for rs.Next() {
+			if rs.Scan(&s) != nil {
+				return nil
+			}
+			return &s
+		}
+		return nil
+	})
+	return &s
 }
 func (dao *WppService) PurchaseWpp(wppId *string, userId *string, forcePurchase bool) sql.Result {
 	sm := mysql.
@@ -115,7 +125,7 @@ func (dao *WppService) PurchaseWpp(wppId *string, userId *string, forcePurchase 
 		SELECT_AS("NOW()", "updated_at").
 		FROM(&entity.Wpp{}, "w").
 		LEFT_JOIN(&entity.StoreUser{}, "su", "su.id=?", userId).
-		LEFT_JOIN(&entity.PurchasedWpp{}, "tw", "(tw.user_id = u.id AND tw.wpp_id = w.id)").
+		LEFT_JOIN(&entity.PurchasedWpp{}, "tw", "(tw.user_id = su.id AND tw.wpp_id = w.id)").
 		WHERE("w.id = ?", wppId).
 		AND("su.id IS NOT NULL")
 	if !forcePurchase {
@@ -141,6 +151,6 @@ func (dao *WppService) CheckPurchased(wppId *string, userId *string) bool {
 	sm := mysql.SELECT().
 		FROM(&entity.PurchasedWpp{}, "p").
 		WHERE("p.user_id = ?", userId).
-		AND("w.wpp_id = ?", wppId)
+		AND("p.wpp_id = ?", wppId)
 	return dao.ExecuteSM(sm).Count() > 0
 }

@@ -28,7 +28,8 @@ func ServerUploadFile(app *gin.Engine) {
 			return
 		}
 		// check if file is wpp
-		if wppServ.IsWpp(&fileId) {
+		wppId := wppServ.IsWpp(&fileId)
+		if wppId != nil {
 			stUser := middlewares.GetStoreUserInfo(ctx)
 			if stUser == nil {
 				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -37,7 +38,7 @@ func ServerUploadFile(app *gin.Engine) {
 				return
 			}
 			// check if user has own wpp
-			if !wppServ.CheckPurchased(&fileId, stUser.User.Id) {
+			if !wppServ.CheckPurchased(wppId, stUser.User.Id) {
 				ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 					"message": "Forbidden",
 				})
