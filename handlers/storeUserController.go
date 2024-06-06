@@ -261,7 +261,7 @@ func (ctrl *StoreUserController) login(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	storeUser := ctrl.storeUserService.FindByUsernameAndPassword(userInfo["email"], userInfo["password"])
+	storeUser := ctrl.storeUserService.FindByUsernameAndPassword(userInfo["username"], userInfo["password"])
 	if storeUser.Id == nil {
 		msg.Error(ctx, "username password error")
 		return
