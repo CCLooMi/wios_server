@@ -102,17 +102,17 @@ func (dao *WppService) IsWpp(fid *string) *string {
 		FROM(&entity.ReleaseNote{}, "rn").
 		WHERE("rn.file_id = ?", fid).
 		LIMIT(1)
-	var s string
+	var s *string
 	dao.ExecuteSM(sm).ExtractorResultSet(func(rs *sql.Rows) interface{} {
 		for rs.Next() {
-			if rs.Scan(&s) != nil {
+			if rs.Scan(s) != nil {
 				return nil
 			}
-			return &s
+			return s
 		}
 		return nil
 	})
-	return &s
+	return s
 }
 func (dao *WppService) PurchaseWpp(wppId *string, userId *string, forcePurchase bool) sql.Result {
 	sm := mysql.
