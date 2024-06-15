@@ -39,7 +39,7 @@ func NewApiController(app *gin.Engine) *ApiController {
 		{Method: "GET", Group: "/api", Path: "/stopVmById", Auth: "api.stopVmById", Handler: ctrl.stopVmById},
 		{Method: "POST", Group: "/api", Path: "/vms", Auth: "api.vms", Handler: ctrl.vms},
 		{Method: "POST", Group: "/api", Path: "/execute", Auth: "api.execute", Handler: ctrl.execute},
-		{Method: "POST", Group: "/api", Path: "/executeById", Auth: "api.executeById", Handler: ctrl.executeById},
+		{Method: "POST", Group: "/api", Path: "/executeById", Auth: "#", Handler: ctrl.executeById, AuthCheck: middlewares.ScriptApiAuthCheck},
 		{Method: "POST", Group: "/api", Path: "/byPage", Auth: "api.list", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/api", Path: "/saveUpdate", Auth: "api.saveUpdate", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/api", Path: "/saveUpdates", Auth: "api.saveUpdates", Handler: ctrl.saveUpdates},
@@ -346,31 +346,9 @@ func (ctrl *ApiController) execute(c *gin.Context) {
 	runUnsafe(script, &id, c, args, reqBody)
 }
 func (ctrl *ApiController) executeById(c *gin.Context) {
-	var reqBody map[string]interface{}
-	if err := c.BindJSON(&reqBody); err != nil {
-		msg.Error(c, err)
-		return
-	}
-	id, ok := reqBody["id"].(string)
-	if !ok {
-		id = utils.UUID()
-	}
-	args, ok := reqBody["args"].([]interface{})
-	if !ok {
-		args = []interface{}{}
-	}
-
-	api := &entity.Api{}
-	ctrl.apiService.ById(&id, api)
-	if api.Id == nil {
-		msg.Error(c, "api not found")
-		return
-	}
-	if api.Script == nil {
-		msg.Ok(c, "")
-		return
-	}
-	runUnsafe(*api.Script, api.Desc, c, args, reqBody)
+	apiInfo := c.MustGet(middlewares.ApiInfoKey).(*middlewares.ApiInfo)
+	api := apiInfo.Api
+	runUnsafe(*api.Script, api.Desc, c, apiInfo.Args, apiInfo.ReqBody)
 }
 func (ctrl *ApiController) byPage(c *gin.Context) {
 	middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {

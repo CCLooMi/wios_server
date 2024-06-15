@@ -6,7 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+	"wios_server/conf"
 	"wios_server/entity"
+	"wios_server/handlers/msg"
+	"wios_server/service"
 	"wios_server/utils"
 )
 
@@ -43,6 +46,12 @@ type StoreUserInfo struct {
 	Id   string            `json:"-"`
 	User *entity.StoreUser `json:"user"`
 }
+type ApiInfo struct {
+	Id      string                 `json:"-"`
+	Api     *entity.Api            `json:"api"`
+	Args    []interface{}          `json:"args"`
+	ReqBody map[string]interface{} `json:"reqBody"`
+}
 
 func RegisterAuths(auths ...*Auth) {
 	for _, auth := range auths {
@@ -59,6 +68,7 @@ func RegisterAuth(auth *Auth) {
 
 const UserInfoKey = "userInfo"
 const UserSessionIDKey = "CID"
+const ApiInfoKey = "apiInfo"
 
 func AuthCheck(c *gin.Context) {
 	path := c.Request.URL.Path
@@ -111,6 +121,75 @@ func AuthCheck(c *gin.Context) {
 
 	// save user info to context
 	c.Set(UserInfoKey, &userInfo)
+
+	c.Next()
+}
+
+var apiService = service.NewApiService(conf.Db)
+
+func ScriptApiAuthCheck(c *gin.Context) {
+	var reqBody map[string]interface{}
+	if err := c.BindJSON(&reqBody); err != nil {
+		msg.Error(c, err)
+		return
+	}
+	id, ok := reqBody["id"].(string)
+	if !ok {
+		id = utils.UUID()
+	}
+	api := &entity.Api{}
+	apiService.ById(&id, api)
+	if api.Id == nil {
+		msg.Error(c, "api not found")
+		return
+	}
+	if api.Script == nil {
+		msg.Ok(c, "")
+		return
+	}
+
+	// check CID value
+	cid, err := c.Cookie(UserSessionIDKey)
+	if err != nil {
+		// return 401
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "Unauthorized",
+		})
+		return
+	}
+	// get user info from redis by CID
+	var userInfo = UserInfo{}
+	err = utils.GetObjDataFromRedis(cid, &userInfo)
+	if api.Status != nil {
+		if *api.Status == "protected" || *api.Status == "private" {
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"message": "Unauthorized",
+				})
+				return
+			}
+			if *api.Status == "private" {
+				if userInfo.User.Username != "root" {
+					hasPermission := userInfo.Permissions[*api.Id]
+					if !hasPermission {
+						// return 403
+						c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+							"message": "Forbidden",
+						})
+						return
+					}
+				}
+			}
+		}
+	}
+	// save user info to context
+	c.Set(UserInfoKey, &userInfo)
+
+	args, ok := reqBody["args"].([]interface{})
+	if !ok {
+		args = []interface{}{}
+	}
+	c.Set(ApiInfoKey, &ApiInfo{Id: id, Api: api, Args: args, ReqBody: reqBody})
 
 	c.Next()
 }
