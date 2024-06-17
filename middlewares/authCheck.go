@@ -147,22 +147,17 @@ func ScriptApiAuthCheck(c *gin.Context) {
 		msg.Ok(c, "")
 		return
 	}
-
-	// check CID value
-	cid, err := c.Cookie(UserSessionIDKey)
-	if err != nil {
-		// return 401
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": "Unauthorized",
-		})
-		return
-	}
 	// get user info from redis by CID
 	var userInfo = UserInfo{}
-	err = utils.GetObjDataFromRedis(cid, &userInfo)
+	// check CID value
+	cid, err := c.Cookie(UserSessionIDKey)
+	if err == nil {
+		utils.GetObjDataFromRedis(cid, &userInfo)
+	}
 	if api.Status != nil {
 		if *api.Status == "protected" || *api.Status == "private" {
-			if err != nil {
+			if userInfo.User == nil || userInfo.User.Id == nil {
+				// return 401
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 					"message": "Unauthorized",
 				})
@@ -184,7 +179,6 @@ func ScriptApiAuthCheck(c *gin.Context) {
 	}
 	// save user info to context
 	c.Set(UserInfoKey, &userInfo)
-
 	args, ok := reqBody["args"].([]interface{})
 	if !ok {
 		args = []interface{}{}
