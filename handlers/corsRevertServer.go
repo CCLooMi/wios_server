@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sync"
@@ -53,6 +54,15 @@ func CorsRevertServer(app *gin.Engine) {
 		proxy, ok := proxyMap[targetURL.String()]
 		if !ok {
 			proxy = httputil.NewSingleHostReverseProxy(proxyURL)
+			proxy.ModifyResponse = func(r *http.Response) error {
+				for key, _ := range conf.Cfg.Header {
+					r.Header.Del(key)
+				}
+				r.Header.Del("Access-Control-Allow-Methods")
+				r.Header.Del("Access-Control-Allow-Origin")
+				r.Header.Del("Access-Control-Allow-Credentials")
+				return nil
+			}
 			proxyMap[targetURL.Host] = proxy
 		}
 		proxyMapMutex.Unlock()

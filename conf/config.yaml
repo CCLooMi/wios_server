@@ -16,6 +16,7 @@ enable_cors: true
 cors_host_list:
   - github.com
   - gitea:3000
+  - bing.com
 header:
   server: "wios_server"
   Access-Control-Allow-Headers: "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization"
