@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sync"
@@ -14,26 +14,32 @@ func CorsRevertServer(app *gin.Engine) {
 	group := app.Group("/proxy")
 	proxyMap := make(map[string]*httputil.ReverseProxy)
 	var proxyMapMutex sync.Mutex
-	group.Use(func(c *gin.Context) {
-		if c.Request.Method == "OPTIONS" {
+	if !conf.Cfg.EnableCORS {
+		group.Use(func(c *gin.Context) {
 			hd := c.Writer.Header()
 			for key, value := range conf.Cfg.Header {
-				hd.Set(key, value)
+				c.Writer.Header().Set(key, value)
 			}
 			hd.Set("Access-Control-Allow-Methods", c.Request.Method)
 			hd.Set("Access-Control-Allow-Origin", c.Request.Header.Get("Origin"))
 			hd.Set("Access-Control-Allow-Credentials", "true")
-			c.AbortWithStatus(200)
-			return
-		}
-		c.Next()
-	})
+			if c.Request.Method == "OPTIONS" {
+				c.AbortWithStatus(200)
+				return
+			}
+			c.Next()
+		})
+	}
 	group.Any("/*path", func(c *gin.Context) {
 		reqPath := c.Param("path")
 		corsUrl := "https:/" + reqPath
 		targetURL, err := url.Parse(corsUrl)
 		if err != nil {
 			msg.Error(c, err.Error())
+			return
+		}
+		if v, exists := conf.CorsHostsMap[targetURL.Host]; !exists || !v {
+			msg.Error(c, fmt.Sprintf("cors host %s not allow", targetURL.Host))
 			return
 		}
 		hostConfHds := conf.Cfg.HostConf[targetURL.Host].Header
@@ -47,18 +53,6 @@ func CorsRevertServer(app *gin.Engine) {
 		proxy, ok := proxyMap[targetURL.String()]
 		if !ok {
 			proxy = httputil.NewSingleHostReverseProxy(proxyURL)
-			proxy.ModifyResponse = func(r *http.Response) error {
-				for key, value := range conf.Cfg.Header {
-					r.Header.Set(key, value)
-				}
-				r.Header.Set("Access-Control-Allow-Methods", c.Request.Method)
-				r.Header.Set("Access-Control-Allow-Origin", c.Request.Header.Get("Origin"))
-				hv := r.Header.Get("Access-Control-Allow-Credentials")
-				if len(hv) == 0 {
-					r.Header.Set("Access-Control-Allow-Credentials", "true")
-				}
-				return nil
-			}
 			proxyMap[targetURL.Host] = proxy
 		}
 		proxyMapMutex.Unlock()

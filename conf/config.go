@@ -43,6 +43,7 @@ type Config struct {
 	FileServer  FileServerConfig    `yaml:"fileServer"`
 	DB          DBConfig            `yaml:"db"`
 	EnableCORS  bool                `yaml:"enable_cors"`
+	CORSHosts   []string            `yaml:"cors_host_list"`
 	Header      map[string]string   `yaml:"header"`
 	LogLevel    string              `yaml:"log_level"`
 	Port        string              `yaml:"port"`
@@ -52,6 +53,8 @@ type Config struct {
 	HostConf    map[string]HostConf `yaml:"host_conf"`
 	Redis       RedisConfig         `yaml:"redis"`
 }
+
+var CorsHostsMap = make(map[string]bool)
 
 func LoadConfig(configFile string) (*Config, error) {
 	data, err := os.ReadFile(configFile)
@@ -64,6 +67,9 @@ func LoadConfig(configFile string) (*Config, error) {
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		return nil, err
+	}
+	for _, host := range config.CORSHosts {
+		CorsHostsMap[host] = true
 	}
 	return &config, nil
 }

@@ -3,16 +3,19 @@ fileServer:
   path: /fileUp
   maxSize: 0
 db:
-  host: gitea
+  host: localhost
   port: 3306
   name: wios_server
   user: root
   password: apple
 redis:
-  host: gitea
+  host: localhost
   port: 6379
   password: 123456
 enable_cors: true
+cors_host_list:
+  - github.com
+  - gitea:3000
 header:
   server: "wios_server"
   Access-Control-Allow-Headers: "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization"
