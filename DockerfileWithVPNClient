@@ -1,0 +1,56 @@
+# Stage 1: Prepare the SoftEther VPN Client
+FROM ubuntu:latest AS downloader
+
+# Install necessary dependencies
+RUN apt-get update && apt-get install -y \
+    curl tar
+
+# Set the working directory
+WORKDIR /tmp
+
+# Define the URL and output file
+ENV VPNCLIENT_URL="https://www.softether-download.com/files/softether/v4.43-9799-beta-2023.08.31-tree/Linux/SoftEther_VPN_Client/64bit_-_Intel_x64_or_AMD64/softether-vpnclient-v4.43-9799-beta-2023.08.31-linux-x64-64bit.tar.gz"
+ENV VPNCLIENT_FILE="softether-vpnclient.tar.gz"
+
+# Download SoftEther VPN Client if it doesn't already exist
+RUN if [ ! -f /dist/${VPNCLIENT_FILE} ]; then \
+    curl -L -o ${VPNCLIENT_FILE} ${VPNCLIENT_URL}; \
+    fi
+
+# Stage 2: Build the SoftEther VPN Client
+FROM ubuntu:latest AS builder
+
+# Install necessary dependencies
+RUN apt-get update && apt-get install -y \
+    tar make gcc libc-dev
+
+# Copy the VPN client tarball from the previous stage
+COPY --from=downloader /tmp/softether-vpnclient.tar.gz /tmp/softether-vpnclient.tar.gz
+
+# Extract and build the VPN client
+RUN tar -xzvf /tmp/softether-vpnclient.tar.gz -C /tmp \
+    && mv /tmp/vpnclient /usr/local/vpnclient \
+    && cd /usr/local/vpnclient \
+    && make
+
+# Stage 3: Create a minimal runtime image
+FROM alpine:latest
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the SoftEther VPN client
+COPY --from=builder /usr/local/vpnclient /usr/local/vpnclient
+
+# Copy the prebuilt Go executable and configuration files
+COPY dist/wios_server_linux /app/myapp
+COPY dist/conf /app/conf
+
+# Set executable permissions (if needed)
+RUN chmod +x /app/myapp
+
+# Set the working directory for VPN client
+WORKDIR /usr/local/vpnclient
+
+# Keep the container running
+CMD ["sh", "-c", "./vpnclient start && tail -f /dev/null"]
