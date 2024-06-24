@@ -1,5 +1,5 @@
-github.com/CCLooMi/sql-mak v0.0.0-20240328110018-3c83ab73ba2f h1:qQAqQ4brFC72W03LrjBTQD+cFWK24PUAq2/sJniTo7s=
-github.com/CCLooMi/sql-mak v0.0.0-20240328110018-3c83ab73ba2f/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
+github.com/CCLooMi/sql-mak v0.0.0-20240622041750-0b5be9f5f93c h1:dQDkYu+WpxQTeKZ2n7JIOpkQtNQ67k0HaVJB/wuKIeo=
+github.com/CCLooMi/sql-mak v0.0.0-20240622041750-0b5be9f5f93c/go.mod h1:gaUSg/+R8J+8j95KDjhEZa93ITUf8esHhydMrMZDUPg=
 github.com/PuerkitoBio/goquery v1.9.2 h1:4/wZksC3KgkQw7SQgkKotmKljk0M6V8TUvA8Wb4yPeE=
 github.com/PuerkitoBio/goquery v1.9.2/go.mod h1:GHPCaP0ODyyxqcNoFGYlAprUFH81NuRPd0GX3Zu2Mvk=
 github.com/andybalholm/cascadia v1.3.2 h1:3Xi6Dw5lHF15JtdcmAHD3i1+T8plmv7BQ/nsViSLyss=

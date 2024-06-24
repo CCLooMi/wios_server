@@ -1,0 +1,63 @@
+# Stage 1: Prepare the SoftEther VPN Bridge
+FROM ubuntu:latest AS downloader
+
+# Install necessary dependencies
+RUN apt-get update && apt-get install -y \
+    curl tar
+
+# Set the working directory
+WORKDIR /tmp
+
+# Define the URL and output file
+ENV VPNBRIDGE_URL="https://www.softether-download.com/files/softether/v4.43-9799-beta-2023.08.31-tree/Linux/SoftEther_VPN_Bridge/64bit_-_Intel_x64_or_AMD64/softether-vpnbridge-v4.43-9799-beta-2023.08.31-linux-x64-64bit.tar.gz"
+ENV VPNBRIDGE_FILE="softether-vpnbridge.tar.gz"
+
+# Copy the VPN bridge tarball from the host machine
+COPY dist/${VPNBRIDGE_FILE} /tmp/${VPNBRIDGE_FILE}
+
+# Download SoftEther VPN Bridge if it doesn't already exist
+RUN if [ ! -f /tmp/${VPNBRIDGE_FILE} ]; then \
+    curl -L -o ${VPNBRIDGE_FILE} ${VPNBRIDGE_URL}; \
+    fi
+
+# Stage 2: Build the SoftEther VPN Bridge
+FROM ubuntu:latest AS builder
+
+# Install necessary dependencies
+RUN apt-get update && apt-get install -y \
+    tar make gcc libc-dev
+
+# Copy the VPN bridge tarball from the previous stage
+COPY --from=downloader /tmp/softether-vpnbridge.tar.gz /tmp/softether-vpnbridge.tar.gz
+
+# Extract and build the VPN bridge
+RUN tar -xzvf /tmp/softether-vpnbridge.tar.gz -C /tmp \
+    && mv /tmp/vpnbridge /usr/local/vpnbridge \
+    && cd /usr/local/vpnbridge \
+    && make
+
+# Stage 3: Create a minimal runtime image
+FROM ubuntu:latest
+
+# Install additional network tools
+RUN apt-get update && apt-get install -y \
+    iproute2 net-tools isc-dhcp-client iputils-ping
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the SoftEther VPN bridge
+COPY --from=builder /usr/local/vpnbridge /usr/local/vpnbridge
+
+# Copy the prebuilt Go executable and configuration files
+COPY dist/wios_server_linux /app/myapp
+COPY dist/conf /app/conf
+
+# Set executable permissions (if needed)
+RUN chmod +x /app/myapp
+
+# Set the working directory for VPN bridge
+WORKDIR /usr/local/vpnbridge
+
+# Keep the container running
+CMD ["sh", "-c", "./vpnbridge start && tail -f /dev/null"]
