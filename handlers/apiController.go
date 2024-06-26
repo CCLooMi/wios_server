@@ -75,7 +75,7 @@ func (vm *vmMeta) SetTitle(t *string) {
 
 var vmMap = make(map[string]*vmMeta)
 
-func runUnsafe(unsafe string, title *string, c *gin.Context, args []any, reqBody map[string]interface{}) {
+func runUnsafe(unsafe string, title *string, c *gin.Context, args interface{}, reqBody map[string]interface{}) {
 	ui, ok := c.Get("userInfo")
 	if !ok {
 		msg.Error(c, "userInfo not found")
@@ -339,9 +339,9 @@ func (ctrl *ApiController) execute(c *gin.Context) {
 		msg.Ok(c, "")
 		return
 	}
-	args, ok := reqBody["args"].([]interface{})
+	args, ok := reqBody["args"]
 	if !ok {
-		args = []interface{}{}
+		args = map[string]interface{}{}
 	}
 	runUnsafe(script, &id, c, args, reqBody)
 }

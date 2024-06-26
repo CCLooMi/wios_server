@@ -49,7 +49,7 @@ type StoreUserInfo struct {
 type ApiInfo struct {
 	Id      string                 `json:"-"`
 	Api     *entity.Api            `json:"api"`
-	Args    []interface{}          `json:"args"`
+	Args    interface{}            `json:"args"`
 	ReqBody map[string]interface{} `json:"reqBody"`
 }
 
