@@ -22,6 +22,7 @@ import (
 	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
+	"wios_server/js"
 	"wios_server/middlewares"
 	"wios_server/service"
 	"wios_server/utils"
@@ -162,9 +163,7 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args interface{}, r
 	vm.Set("args", args)
 	vm.Set("exit", exit)
 	vm.Set("self", &self)
-	for key, kfunc := range VMFuncs {
-		vm.Set(key, kfunc)
-	}
+	js.ApplyExportsTo(vm)
 	result, err := vm.Run(unsafe)
 	if err != nil {
 		msg.Error(c, err.Error())

@@ -37,6 +37,10 @@ type RedisConfig struct {
 type HostConf struct {
 	Header map[string]string `yaml:"header"`
 }
+type DHTConfig struct {
+	ListenAddrs    []string `yaml:"listen_addrs"`
+	BootstrapNodes []string `yaml:"bootstrap_nodes"`
+}
 
 // Config 包含应用程序的所有配置信息
 type Config struct {
@@ -52,6 +56,7 @@ type Config struct {
 	KeyFile     string              `yaml:"https_key_file"`
 	HostConf    map[string]HostConf `yaml:"host_conf"`
 	Redis       RedisConfig         `yaml:"redis"`
+	DHTConf     DHTConfig           `yaml:"dht"`
 }
 
 var CorsHostsMap = make(map[string]bool)

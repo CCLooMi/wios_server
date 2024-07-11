@@ -10,6 +10,7 @@ func RegisterHandlers(app *gin.Engine) {
 	HandleWebSocket(app)
 	HandleFileUpload(app)
 	ServerUploadFile(app)
+	NewPrometheusController(app)
 	NewUserController(app)
 	NewMenuController(app)
 	NewOrgController(app)

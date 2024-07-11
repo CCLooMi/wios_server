@@ -22,6 +22,15 @@ header:
   Access-Control-Allow-Headers: "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization"
 log_level: info
 port: 4040
-enable_https: false
+enable_https: true
 https_cert_file: conf/cert/cert.pem
 https_key_file: conf/cert/key.pem
+dht:
+  listen_addrs:
+    - /ip4/0.0.0.0/tcp/5001
+    - /ip4/0.0.0.0/udp/5001/quic-v1
+    - /ip4/0.0.0.0/udp/5001/quic-v1/webtransport
+    - /ip6/::/tcp/5001
+    - /ip6/::/udp/5001/quic-v1
+    - /ip6/::/udp/5001/quic-v1/webtransport
+  bootstrap_nodes:
