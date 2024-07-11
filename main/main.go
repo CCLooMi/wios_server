@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
@@ -47,7 +49,18 @@ func (blankValidator) Select(_ string, _ [][]byte) (int, error) { return 0, nil 
 
 func startDHTNode() {
 	ctx := context.Background()
-	host, err := libp2p.New(libp2p.ListenAddrStrings(conf.Cfg.DHTConf.ListenAddrs...))
+	pd, err := base64.StdEncoding.DecodeString(conf.Cfg.DHTConf.PrivateKey)
+	if err != nil {
+		panic(err)
+	}
+	pKey, err := crypto.UnmarshalEd25519PrivateKey(pd)
+	if err != nil {
+		panic(err)
+	}
+	host, err := libp2p.New(
+		libp2p.ListenAddrStrings(conf.Cfg.DHTConf.ListenAddrs...),
+		libp2p.Identity(pKey),
+	)
 	if err != nil {
 		logrus.Fatalf("Failed to create libp2p host: %v", err)
 	}

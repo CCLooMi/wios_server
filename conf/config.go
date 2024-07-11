@@ -2,12 +2,16 @@ package conf
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -38,6 +42,8 @@ type HostConf struct {
 	Header map[string]string `yaml:"header"`
 }
 type DHTConfig struct {
+	PeerId         string   `yaml:"peer_id"`
+	PrivateKey     string   `yaml:"private_key"`
 	ListenAddrs    []string `yaml:"listen_addrs"`
 	BootstrapNodes []string `yaml:"bootstrap_nodes"`
 }
@@ -84,11 +90,13 @@ var Db *sql.DB
 var Rdb *redis.Client
 var Ctx = context.Background()
 var SysCfg = make(map[string]interface{})
+var cfgName string
 
 func init() {
-	cfgName := "config.yaml"
-	config, err := LoadConfig("conf/" + cfgName)
+	cfgName = "conf/config.yaml"
+	config, err := LoadConfig(cfgName)
 	if err != nil {
+		cfgName = "config.yaml"
 		config, err = LoadConfig(cfgName)
 		if err != nil {
 			logrus.Warnf("failed to load config file: %v", err)
@@ -97,8 +105,27 @@ func init() {
 	}
 	Db, Rdb = InitDB(config)
 	Cfg = config
+	initPeerId()
 }
-
+func initPeerId() {
+	if Cfg.DHTConf.PeerId != "" {
+		return
+	}
+	// Generate a new private key
+	privKey, pubKey, err := crypto.GenerateKeyPairWithReader(crypto.Ed25519, 2048, rand.Reader)
+	if err != nil {
+		logrus.Fatalf("Failed to generate key pair: %s", err)
+	}
+	// Extract the Peer ID from the public key
+	peerID, err := peer.IDFromPublicKey(pubKey)
+	if err != nil {
+		logrus.Fatalf("Failed to get Peer ID from public key: %s", err)
+	}
+	Cfg.DHTConf.PeerId = peerID.String()
+	pd, _ := privKey.Raw()
+	Cfg.DHTConf.PrivateKey = base64.StdEncoding.EncodeToString(pd)
+	saveConfigToFile()
+}
 func InitDB(config *Config) (*sql.DB, *redis.Client) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port, config.DB.Name)
@@ -144,4 +171,16 @@ func LoadSysCfg(db *sql.DB) {
 		}
 		return nil
 	})
+}
+
+func saveConfigToFile() {
+	data, err := yaml.Marshal(Cfg)
+	if err != nil {
+		logrus.Errorf("failed to marshal config to YAML: %w", err)
+		return
+	}
+	if err := os.WriteFile(cfgName, data, 0644); err != nil {
+		logrus.Errorf("failed to write YAML to file: %w", err)
+		return
+	}
 }
