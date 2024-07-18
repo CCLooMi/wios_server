@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
@@ -14,8 +14,8 @@ type OrgController struct {
 	orgService *service.OrgService
 }
 
-func NewOrgController(app *gin.Engine) *OrgController {
-	ctrl := &OrgController{orgService: service.NewOrgService(conf.Db)}
+func NewOrgController(app *gin.Engine, db *sql.DB) *OrgController {
+	ctrl := &OrgController{orgService: service.NewOrgService(db)}
 	group := app.Group("/org")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/org", Path: "/byPage", Auth: "org.list", Handler: ctrl.byPage},

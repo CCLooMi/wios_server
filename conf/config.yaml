@@ -1,36 +1,39 @@
 fileServer:
-  saveDir: static/upload
-  path: /fileUp
-  maxSize: 0
+    saveDir: static/upload
+    path: /fileUp
+    maxSize: 0
 db:
-  host: localhost
-  port: 3306
-  name: wios_server
-  user: root
-  password: apple
-redis:
-  host: localhost
-  port: 6379
-  password: 123456
+    host: localhost
+    port: "3306"
+    name: wios_server
+    user: root
+    password: apple
 enable_cors: true
 cors_host_list:
-  - github.com
-  - gitea:3000
-  - bing.com
+    - github.com
+    - gitea:3000
+    - bing.com
 header:
-  server: "wios_server"
-  Access-Control-Allow-Headers: "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization"
+    Access-Control-Allow-Headers: Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
+    server: wios_server
 log_level: info
-port: 4040
+port: "4040"
 enable_https: true
 https_cert_file: conf/cert/cert.pem
 https_key_file: conf/cert/key.pem
+host_conf: {}
+redis:
+    host: localhost
+    port: "6379"
+    password: "123456"
 dht:
-  listen_addrs:
-    - /ip4/0.0.0.0/tcp/5001
-    - /ip4/0.0.0.0/udp/5001/quic-v1
-    - /ip4/0.0.0.0/udp/5001/quic-v1/webtransport
-    - /ip6/::/tcp/5001
-    - /ip6/::/udp/5001/quic-v1
-    - /ip6/::/udp/5001/quic-v1/webtransport
-  bootstrap_nodes:
+    peer_id: 12D3KooWFmTUba5R1ZsdkyaLBL87ueThRv3rMSPsVw9yC1d3X6K8
+    private_key: IQwbC7bBvEqDN+231Racw9+EjdHOFMjWN6Umqnks17dYZ2F0N/kWd0JPAFJHwoSFWNOTfshZPjx7GqD7O7nunw==
+    listen_addrs:
+        - /ip4/0.0.0.0/tcp/5001
+        - /ip4/0.0.0.0/udp/5001/quic-v1
+        - /ip4/0.0.0.0/udp/5001/quic-v1/webtransport
+        - /ip6/::/tcp/5001
+        - /ip6/::/udp/5001/quic-v1
+        - /ip6/::/udp/5001/quic-v1/webtransport
+    bootstrap_nodes: []

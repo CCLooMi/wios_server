@@ -3,8 +3,7 @@ package service
 import (
 	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql"
-	"github.com/sirupsen/logrus"
-	"wios_server/conf"
+	"go.uber.org/zap"
 	"wios_server/dao"
 	"wios_server/entity"
 	"wios_server/utils"
@@ -14,10 +13,12 @@ import (
 
 type UserService struct {
 	*dao.BaseDao
+	db  *sql.DB
+	log *zap.Logger
 }
 
-func NewUserService(db *sql.DB) *UserService {
-	return &UserService{BaseDao: dao.NewBaseDao(db)}
+func NewUserService(db *sql.DB, log *zap.Logger) *UserService {
+	return &UserService{BaseDao: dao.NewBaseDao(db), db: db, log: log}
 }
 
 func (dao *UserService) FindById(id *string) (*entity.User, error) {
@@ -103,7 +104,7 @@ func (dao *UserService) FindMenusByUser(user *entity.User) []entity.Menu {
 }
 
 func (dao *UserService) DeleteUser(e *entity.User) []sql.Result {
-	tx, err := conf.Db.Begin()
+	tx, err := dao.db.Begin()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -127,7 +128,7 @@ func (dao *UserService) FindRolesByUserId(userId string, page int, pageSize int,
 		}
 	})
 	if err != nil {
-		logrus.Warn(err.Error())
+		dao.log.Warn(err.Error())
 	}
 	return map[string]interface{}{
 		"total": count,

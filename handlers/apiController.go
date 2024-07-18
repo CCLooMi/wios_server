@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/js"
@@ -33,14 +32,14 @@ type ApiController struct {
 	apiService *service.ApiService
 }
 
-func NewApiController(app *gin.Engine) *ApiController {
-	ctrl := &ApiController{db: conf.Db, apiService: service.NewApiService(conf.Db)}
+func NewApiController(app *gin.Engine, db *sql.DB, ut *utils.Utils, ac *middlewares.AuthChecker) *ApiController {
+	ctrl := &ApiController{db: db, apiService: service.NewApiService(db, ut)}
 	group := app.Group("/api")
 	hds := []middlewares.Auth{
 		{Method: "GET", Group: "/api", Path: "/stopVmById", Auth: "api.stopVmById", Handler: ctrl.stopVmById},
 		{Method: "POST", Group: "/api", Path: "/vms", Auth: "api.vms", Handler: ctrl.vms},
 		{Method: "POST", Group: "/api", Path: "/execute", Auth: "api.execute", Handler: ctrl.execute},
-		{Method: "POST", Group: "/api", Path: "/executeById", Auth: "#", Handler: ctrl.executeById, AuthCheck: middlewares.ScriptApiAuthCheck},
+		{Method: "POST", Group: "/api", Path: "/executeById", Auth: "#", Handler: ctrl.executeById, AuthCheck: ac.ScriptApiAuthCheck},
 		{Method: "POST", Group: "/api", Path: "/byPage", Auth: "api.list", Handler: ctrl.byPage},
 		{Method: "POST", Group: "/api", Path: "/saveUpdate", Auth: "api.saveUpdate", Handler: ctrl.saveUpdate},
 		{Method: "POST", Group: "/api", Path: "/saveUpdates", Auth: "api.saveUpdates", Handler: ctrl.saveUpdates},
@@ -76,7 +75,7 @@ func (vm *vmMeta) SetTitle(t *string) {
 
 var vmMap = make(map[string]*vmMeta)
 
-func runUnsafe(unsafe string, title *string, c *gin.Context, args interface{}, reqBody map[string]interface{}) {
+func (ctrl *ApiController) runUnsafe(unsafe string, title *string, c *gin.Context, args interface{}, reqBody map[string]interface{}) {
 	ui, ok := c.Get("userInfo")
 	if !ok {
 		msg.Error(c, "userInfo not found")
@@ -136,9 +135,9 @@ func runUnsafe(unsafe string, title *string, c *gin.Context, args interface{}, r
 			sm := mak.NewSQLSM()
 			f(sm, page.Opts)
 			sm.LIMIT(page.PageNumber*page.PageSize, page.PageSize)
-			out := sm.Execute(conf.Db).GetResultAsMapList()
+			out := sm.Execute(ctrl.db).GetResultAsMapList()
 			if page.PageNumber == 0 {
-				return sm.Execute(conf.Db).Count(), out, nil
+				return sm.Execute(ctrl.db).Count(), out, nil
 			}
 			return -1, out, nil
 		})
@@ -342,12 +341,12 @@ func (ctrl *ApiController) execute(c *gin.Context) {
 	if !ok {
 		args = map[string]interface{}{}
 	}
-	runUnsafe(script, &id, c, args, reqBody)
+	ctrl.runUnsafe(script, &id, c, args, reqBody)
 }
 func (ctrl *ApiController) executeById(c *gin.Context) {
 	apiInfo := c.MustGet(middlewares.ApiInfoKey).(*middlewares.ApiInfo)
 	api := apiInfo.Api
-	runUnsafe(*api.Script, api.Desc, c, apiInfo.Args, apiInfo.ReqBody)
+	ctrl.runUnsafe(*api.Script, api.Desc, c, apiInfo.Args, apiInfo.ReqBody)
 }
 func (ctrl *ApiController) byPage(c *gin.Context) {
 	middlewares.ByPage(c, func(page *middlewares.Page) (int64, any, error) {

@@ -11,14 +11,14 @@ import (
 	"wios_server/handlers/msg"
 )
 
-func CorsRevertServer(app *gin.Engine) {
+func CorsRevertServer(app *gin.Engine, config *conf.Config) {
 	group := app.Group("/proxy")
 	proxyMap := make(map[string]*httputil.ReverseProxy)
 	var proxyMapMutex sync.Mutex
-	if !conf.Cfg.EnableCORS {
+	if !config.EnableCORS {
 		group.Use(func(c *gin.Context) {
 			hd := c.Writer.Header()
-			for key, value := range conf.Cfg.Header {
+			for key, value := range config.Header {
 				c.Writer.Header().Set(key, value)
 			}
 			hd.Set("Access-Control-Allow-Methods", c.Request.Method)
@@ -43,7 +43,7 @@ func CorsRevertServer(app *gin.Engine) {
 			msg.Error(c, fmt.Sprintf("cors host %s not allow", targetURL.Host))
 			return
 		}
-		hostConfHds := conf.Cfg.HostConf[targetURL.Host].Header
+		hostConfHds := config.HostConf[targetURL.Host].Header
 		for key, value := range hostConfHds {
 			c.Request.Header.Set(key, value)
 		}
@@ -55,7 +55,7 @@ func CorsRevertServer(app *gin.Engine) {
 		if !ok {
 			proxy = httputil.NewSingleHostReverseProxy(proxyURL)
 			proxy.ModifyResponse = func(r *http.Response) error {
-				for key, _ := range conf.Cfg.Header {
+				for key, _ := range config.Header {
 					r.Header.Del(key)
 				}
 				r.Header.Del("Access-Control-Allow-Methods")

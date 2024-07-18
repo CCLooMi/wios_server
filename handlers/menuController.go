@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
@@ -16,8 +16,8 @@ type MenuController struct {
 	menuService *service.MenuService
 }
 
-func NewMenuController(app *gin.Engine) *MenuController {
-	ctrl := &MenuController{menuService: service.NewMenuService(conf.Db)}
+func NewMenuController(app *gin.Engine, db *sql.DB) *MenuController {
+	ctrl := &MenuController{menuService: service.NewMenuService(db)}
 	group := app.Group("/menu")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/menu", Path: "/byPage", Auth: "menu.list", Handler: ctrl.byPage},

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
 	"wios_server/conf"
@@ -12,10 +13,12 @@ import (
 
 type ConfigController struct {
 	configService *service.ConfigService
+	db            *sql.DB
+	config        *conf.Config
 }
 
-func NewConfigController(app *gin.Engine) *ConfigController {
-	ctrl := &ConfigController{configService: service.NewConfigService(conf.Db)}
+func NewConfigController(app *gin.Engine, db *sql.DB, config *conf.Config) *ConfigController {
+	ctrl := &ConfigController{configService: service.NewConfigService(db), db: db, config: config}
 	group := app.Group("/config")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/config", Path: "/byPage", Auth: "config.list", Handler: ctrl.byPage},
@@ -78,6 +81,6 @@ func (ctrl *ConfigController) delete(ctx *gin.Context) {
 	msg.Error(ctx, "delete failed")
 }
 func (ctrl *ConfigController) reloadSysConfig(ctx *gin.Context) {
-	conf.LoadSysCfg(conf.Db)
+	conf.LoadSysCfg(ctrl.db, ctrl.config)
 	msg.Ok(ctx, "ok")
 }

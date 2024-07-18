@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
 	"github.com/mojocn/base64Captcha"
@@ -18,11 +19,22 @@ import (
 
 type StoreUserController struct {
 	storeUserService *service.StoreUserService
+	config           *conf.Config
+	db               *sql.DB
+	ut               *utils.Utils
+	captchaStore     *redisStore
 }
 
-func NewStoreUserController(app *gin.Engine) *StoreUserController {
+func NewStoreUserController(app *gin.Engine, config *conf.Config, db *sql.DB, ut *utils.Utils, ac *middlewares.AuthChecker) *StoreUserController {
 	ctrl := &StoreUserController{
-		storeUserService: service.NewStoreUserService(conf.Db),
+		storeUserService: service.NewStoreUserService(db),
+		config:           config,
+		db:               db,
+		ut:               ut,
+		captchaStore: &redisStore{
+			Expire: 600 * time.Second,
+			ut:     ut,
+		},
 	}
 	group := app.Group("/storeUser")
 	hds := []middlewares.Auth{
@@ -32,10 +44,10 @@ func NewStoreUserController(app *gin.Engine) *StoreUserController {
 		{Method: "POST", Group: "/storeUser", Path: "/sendVerifyCodeEmail", Handler: ctrl.sendVerifyCodeEmail},
 		{Method: "POST", Group: "/storeUser", Path: "/new", Handler: ctrl.newStoreUser},
 		{Method: "POST", Group: "/storeUser", Path: "/byPage", Auth: "storeUser.byPage", Handler: ctrl.byPage},
-		{Method: "POST", Group: "/storeUser", Path: "/update", Auth: "#", Handler: ctrl.update, AuthCheck: middlewares.StoreAuthCheck},
-		{Method: "POST", Group: "/storeUser", Path: "/delete", Auth: "#", Handler: ctrl.delete, AuthCheck: middlewares.StoreAuthCheck},
-		{Method: "GET", Group: "/storeUser", Path: "/current", Auth: "#", Handler: ctrl.currentStoreUser, AuthCheck: middlewares.StoreAuthCheck},
-		{Method: "GET", Group: "/storeUser", Path: "/logout", Auth: "#", Handler: ctrl.logout, AuthCheck: middlewares.StoreAuthCheck},
+		{Method: "POST", Group: "/storeUser", Path: "/update", Auth: "#", Handler: ctrl.update, AuthCheck: ac.StoreAuthCheck},
+		{Method: "POST", Group: "/storeUser", Path: "/delete", Auth: "#", Handler: ctrl.delete, AuthCheck: ac.StoreAuthCheck},
+		{Method: "GET", Group: "/storeUser", Path: "/current", Auth: "#", Handler: ctrl.currentStoreUser, AuthCheck: ac.StoreAuthCheck},
+		{Method: "GET", Group: "/storeUser", Path: "/logout", Auth: "#", Handler: ctrl.logout, AuthCheck: ac.StoreAuthCheck},
 	}
 	for i, hd := range hds {
 		middlewares.RegisterAuth(&hds[i])
@@ -54,15 +66,16 @@ func (ctrl *StoreUserController) byPage(ctx *gin.Context) {
 type redisStore struct {
 	Expire time.Duration
 	base64Captcha.Store
+	ut *utils.Utils
 }
 
 func (c *redisStore) Set(id string, value string) error {
-	return utils.SaveKVToRedis(id, value, c.Expire)
+	return c.ut.SaveKVToRedis(id, value, c.Expire)
 }
 func (c *redisStore) Get(key string, clear bool) string {
-	v, _ := utils.GetValueFromRedis(key)
+	v, _ := c.ut.GetValueFromRedis(key)
 	if clear {
-		utils.DelFromRedis(key)
+		c.ut.DelFromRedis(key)
 	}
 	return v
 }
@@ -81,10 +94,6 @@ type captchaConfig struct {
 	DriverChinese *base64Captcha.DriverChinese `json:"chinese"`
 	DriverMath    *base64Captcha.DriverMath    `json:"math"`
 	DriverDigit   *base64Captcha.DriverDigit   `json:"digit"`
-}
-
-var captchaStore = &redisStore{
-	Expire: 600 * time.Second,
 }
 
 func (ctrl *StoreUserController) captcha(ctx *gin.Context) {
@@ -106,7 +115,7 @@ func (ctrl *StoreUserController) captcha(ctx *gin.Context) {
 	default:
 		driver = conf.DriverDigit
 	}
-	captchaInstance := base64Captcha.NewCaptcha(driver, captchaStore)
+	captchaInstance := base64Captcha.NewCaptcha(driver, ctrl.captchaStore)
 	id, captchaB64, _, err := captchaInstance.Generate()
 	if err != nil {
 		msg.Error(ctx, err.Error())
@@ -123,7 +132,7 @@ func (ctrl *StoreUserController) verifyCaptcha(ctx *gin.Context) {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	ok := captchaStore.Verify(m["id"], m["code"], false)
+	ok := ctrl.captchaStore.Verify(m["id"], m["code"], false)
 	if ok {
 		msg.Ok(ctx, nil)
 		return
@@ -138,11 +147,11 @@ func (ctrl *StoreUserController) sendVerifyCodeEmail(ctx *gin.Context) {
 	}
 	captchaId := info["captchaId"]
 	code := info["code"]
-	if !captchaStore.Verify(captchaId, code, true) {
+	if !ctrl.captchaStore.Verify(captchaId, code, true) {
 		msg.Error(ctx, "invalid answer")
 		return
 	}
-	tmp := conf.SysCfg["code.verify.template"].(string)
+	tmp := ctrl.config.SysConf["code.verify.template"].(string)
 	code = utils.GenRandomNum(6)
 	info["code"] = code
 	info["year"] = strconv.Itoa(time.Now().Year())
@@ -152,12 +161,12 @@ func (ctrl *StoreUserController) sendVerifyCodeEmail(ctx *gin.Context) {
 		return
 	}
 	email := info["email"]
-	err = utils.SendMail("Verification Code From WiOS Group", &body, email)
+	err = ctrl.ut.SendMail("Verification Code From WiOS Group", &body, email)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
 	}
-	err = captchaStore.Set(email, code)
+	err = ctrl.captchaStore.Set(email, code)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
@@ -172,7 +181,7 @@ func (ctrl *StoreUserController) newStoreUser(ctx *gin.Context) {
 	}
 	email := m["email"]
 	code := m["code"]
-	if !captchaStore.Verify(email, code, true) {
+	if !ctrl.captchaStore.Verify(email, code, true) {
 		msg.Error(ctx, "invalid verify code!")
 		return
 	}
@@ -232,7 +241,7 @@ func (ctrl *StoreUserController) update(ctx *gin.Context) {
 	}
 	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
 	userInfo.User = &storeUser
-	utils.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
+	ctrl.ut.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
 	storeUser.Password = ""
 	storeUser.Seed = nil
 	msg.Ok(ctx, &storeUser)
@@ -268,7 +277,7 @@ func (ctrl *StoreUserController) login(ctx *gin.Context) {
 	}
 	SID, _ := ctx.Cookie(middlewares.StoreSessionIDKey)
 	if SID != "" {
-		utils.DelFromRedis(SID)
+		ctrl.ut.DelFromRedis(SID)
 	}
 	SID = utils.GenerateRandomID()
 	domain := utils.RemoveDomainPort(ctx.Request.Host)
@@ -287,7 +296,7 @@ func (ctrl *StoreUserController) login(ctx *gin.Context) {
 		"id":   SID,
 		"user": storeUser,
 	}
-	err := utils.SaveObjDataToRedis(SID, infoMap, time.Hour*24)
+	err := ctrl.ut.SaveObjDataToRedis(SID, infoMap, time.Hour*24)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
@@ -308,6 +317,6 @@ func (ctrl *StoreUserController) logout(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"msg": "unauthorized"})
 		return
 	}
-	utils.DelFromRedis(SID)
+	ctrl.ut.DelFromRedis(SID)
 	msg.Ok(ctx, nil)
 }

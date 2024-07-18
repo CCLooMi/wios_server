@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -17,11 +18,11 @@ func ServerStaticDir(app *gin.Engine) {
 	app.Static("/test", "./static/public/test")
 }
 
-func ServerUploadFile(app *gin.Engine) {
-	wppServ := service.NewWppService(conf.Db)
+func ServerUploadFile(app *gin.Engine, db *sql.DB, config *conf.Config, ut *utils.Utils) {
+	wppServ := service.NewWppService(db)
 	app.GET("/upload/:fileId", func(ctx *gin.Context) {
 		fileId := ctx.Param("fileId")
-		filePath := getRealPath(fileId)
+		filePath := getRealPath(config.FileServer.SaveDir, fileId)
 		// check if file exists
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			ctx.String(http.StatusNotFound, "File not found")
@@ -30,7 +31,7 @@ func ServerUploadFile(app *gin.Engine) {
 		// check if file is wpp
 		wppId := wppServ.IsWpp(&fileId)
 		if wppId != nil {
-			stUser := middlewares.GetStoreUserInfo(ctx)
+			stUser := middlewares.GetStoreUserInfo(ctx, ut)
 			if stUser == nil {
 				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 					"message": "Unauthorized",
@@ -51,8 +52,8 @@ func ServerUploadFile(app *gin.Engine) {
 	})
 }
 
-func getRealPath(fid string) string {
+func getRealPath(workDir string, fid string) string {
 	return path.Join(
-		conf.Cfg.FileServer.SaveDir,
+		workDir,
 		utils.GetFPathByFid(fid), "0")
 }

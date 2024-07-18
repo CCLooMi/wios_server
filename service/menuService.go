@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
-	"wios_server/conf"
 	"wios_server/dao"
 	"wios_server/entity"
 	"wios_server/utils"
@@ -12,10 +11,11 @@ import (
 
 type MenuService struct {
 	*dao.BaseDao
+	db *sql.DB
 }
 
 func NewMenuService(db *sql.DB) *MenuService {
-	return &MenuService{BaseDao: dao.NewBaseDao(db)}
+	return &MenuService{BaseDao: dao.NewBaseDao(db), db: db}
 }
 
 func (dao *MenuService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQLSM)) (int64, []entity.Menu, error) {
@@ -28,7 +28,7 @@ func (dao *MenuService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQL
 }
 func (dao *MenuService) DeleteMenu(menu *entity.Menu) []sql.Result {
 	// 开启事务
-	tx, err := conf.Db.Begin()
+	tx, err := dao.db.Begin()
 	if err != nil {
 		panic(err.Error())
 	}

@@ -4,8 +4,7 @@ import (
 	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
-	"github.com/sirupsen/logrus"
-	"wios_server/conf"
+	"go.uber.org/zap"
 	"wios_server/dao"
 	"wios_server/entity"
 	"wios_server/handlers/beans"
@@ -14,10 +13,12 @@ import (
 
 type RoleService struct {
 	*dao.BaseDao
+	db  *sql.DB
+	log *zap.Logger
 }
 
-func NewRoleService(db *sql.DB) *RoleService {
-	return &RoleService{BaseDao: dao.NewBaseDao(db)}
+func NewRoleService(db *sql.DB, log *zap.Logger) *RoleService {
+	return &RoleService{BaseDao: dao.NewBaseDao(db), db: db, log: log}
 }
 func (dao *RoleService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQLSM)) (int64, []entity.Role, error) {
 	var roles []entity.Role
@@ -34,7 +35,7 @@ func (dao *RoleService) SaveUpdate(role *entity.Role) sql.Result {
 	return dao.SaveOrUpdate(role)
 }
 func (dao *RoleService) DeleteRole(e *entity.Role) []sql.Result {
-	tx, err := conf.Db.Begin()
+	tx, err := dao.db.Begin()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -72,7 +73,7 @@ func (dao *RoleService) FindUsersByRoleId(roleId string, pageNumber int, pageSiz
 		}
 	})
 	if err != nil {
-		logrus.Warn(err.Error())
+		dao.log.Warn(err.Error())
 	}
 	return map[string]interface{}{
 		"total": count,
@@ -92,7 +93,7 @@ func (dao *RoleService) RemoveUser(e *entity.RoleUser) sql.Result {
 	return dao.Delete(e)
 }
 func (dao *RoleService) UpdateMenus(add []entity.RoleMenu, del []interface{}) []sql.Result {
-	tx, err := conf.Db.Begin()
+	tx, err := dao.db.Begin()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -127,7 +128,7 @@ func (dao *RoleService) FindPermissionsByRole(e *entity.Role) map[string]bool {
 }
 
 func (dao *RoleService) UpdatePermissions(add []entity.RolePermission, del []interface{}) []sql.Result {
-	tx, err := conf.Db.Begin()
+	tx, err := dao.db.Begin()
 	if err != nil {
 		panic(err.Error())
 	}

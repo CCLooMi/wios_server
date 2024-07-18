@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"crypto/sha1"
+	"database/sql"
 	"encoding/hex"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
-	"wios_server/conf"
+	"go.uber.org/zap"
 	"wios_server/entity"
 	"wios_server/handlers/beans"
 	"wios_server/handlers/msg"
@@ -17,8 +18,8 @@ type RoleController struct {
 	roleService *service.RoleService
 }
 
-func NewRoleController(app *gin.Engine) *RoleController {
-	ctrl := &RoleController{roleService: service.NewRoleService(conf.Db)}
+func NewRoleController(app *gin.Engine, db *sql.DB, log *zap.Logger) *RoleController {
+	ctrl := &RoleController{roleService: service.NewRoleService(db, log)}
 	group := app.Group("/role")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/role", Path: "/byPage", Auth: "role.list", Handler: ctrl.byPage},

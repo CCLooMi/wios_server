@@ -5,11 +5,11 @@ import (
 	"wios_server/conf"
 )
 
-func ApplyConfig(c *gin.Context) {
-	for key, value := range conf.Cfg.Header {
+func ApplyConfig(c *gin.Context, config *conf.Config) {
+	for key, value := range config.Header {
 		c.Writer.Header().Set(key, value)
 	}
-	if conf.Cfg.EnableCORS {
+	if config.EnableCORS {
 		c.Writer.Header().Set("Access-Control-Allow-Methods", c.Request.Method)
 		c.Writer.Header().Set("Access-Control-Allow-Origin", c.Request.Header.Get("Origin"))
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")

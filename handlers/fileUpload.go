@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -200,10 +201,10 @@ func PushFinishedCmd(bid []byte, cnn *websocket.Conn) {
 	copy(bb[4:], bid)
 	pushBinMsg(bb, cnn)
 }
-func CheckExist(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
+func CheckExist(workDir string, fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
 	fid := fileInfo.Id
 	bid, _ := hex.DecodeString(fid)
-	basePath := path.Join(conf.Cfg.FileServer.SaveDir, utils.GetFPathByFid(fid))
+	basePath := path.Join(workDir, utils.GetFPathByFid(fid))
 	if _, err := os.Stat(filepath.Join(basePath, "0")); err == nil {
 		PushFinishedCmd(bid, cnn)
 		//start save update file info
@@ -303,9 +304,9 @@ func NewBSet(fSize int64) []byte {
 	}
 }
 
-func HandleFileUpload(app *gin.Engine) {
-	path := conf.Cfg.FileServer.Path
-	uploadServer := service.NewUploadService(conf.Db)
+func HandleFileUpload(app *gin.Engine, config *conf.Config, db *sql.DB, ut *utils.Utils) {
+	path := config.FileServer.Path
+	uploadServer := service.NewUploadService(db)
 	app.GET(path, func(c *gin.Context) {
 		// 获取客户端发送的协议参数
 		protocols := c.Request.Header["Sec-Websocket-Protocol"]
@@ -313,9 +314,9 @@ func HandleFileUpload(app *gin.Engine) {
 		upgrader := websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				if len(protocols) > 0 && "wstore" == protocols[0] {
-					return middlewares.GetStoreUserInfo(c) != nil
+					return middlewares.GetStoreUserInfo(c, ut) != nil
 				}
-				return middlewares.GetUserInfo(c) != nil
+				return middlewares.GetUserInfo(c, ut) != nil
 			},
 			Subprotocols: []string{"wstore"},
 		}
@@ -343,7 +344,7 @@ func HandleFileUpload(app *gin.Engine) {
 					fmt.Println("Error:", err)
 					break
 				}
-				onStrMsg(&fileInfo, conn, address, uploadServer)
+				onStrMsg(config.FileServer.SaveDir, &fileInfo, conn, address, uploadServer)
 				continue
 			}
 			if msgType == websocket.BinaryMessage {
@@ -365,8 +366,8 @@ func onClose(cnn *websocket.Conn, cnnAddress int64) {
 		fa.Dispose()
 	}
 }
-func onStrMsg(fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
-	CheckExist(fileInfo, cnn, cnnAddress, uploadServer)
+func onStrMsg(workDir string, fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
+	CheckExist(workDir, fileInfo, cnn, cnnAddress, uploadServer)
 }
 func onBinMsg(msg []byte, cnn *websocket.Conn, uploadServer *service.UploadService) {
 	start := binary.BigEndian.Uint64(msg[:8])

@@ -3,10 +3,13 @@ package js
 import (
 	"context"
 	"crypto/md5"
+	"database/sql"
 	"encoding/hex"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
+	"github.com/go-redis/redis/v8"
 	"github.com/robertkrimen/otto"
+	"go.uber.org/fx"
 	"time"
 	"wios_server/conf"
 	"wios_server/utils"
@@ -64,22 +67,22 @@ var templateM = templateStruct{
 }
 var vmFuncs = make(map[string]interface{})
 
-func init() {
+func doRegExports(ut *utils.Utils, config *conf.Config, db *sql.DB, rdb *redis.Client) {
+	RegExport("openExcelById", ut.OpenExcelByFid)
+	RegExport("delFileById", ut.DelFileByFid)
+	RegExport("sendMail", ut.SendMail)
+	RegExport("sendMailWithFiles", ut.SendMailWithFiles)
+	RegExport("db", db)
+	RegExport("rdb", rdb)
+	RegExport("cfg", config)
+	RegExport("sysCfg", config.SysConf)
 	RegExport("lookupDNSRecord", utils.LookupDNSRecord)
-	RegExport("openExcelById", utils.OpenExcelByFid)
 	RegExport("setSheetRow", utils.SetExcelSheetRow)
 	RegExport("setSheetRows", utils.SetExcelSheetRows)
 	RegExport("cellNameToCoordinates", utils.CellNameToCoordinates)
 	RegExport("coordinatesToCellName", utils.CoordinatesToCellName)
-	RegExport("delFileById", utils.DelFileByFid)
-	RegExport("sendMail", utils.SendMail)
-	RegExport("sendMailWithFiles", utils.SendMailWithFiles)
 	RegExport("UUID", utils.UUID)
 	RegExport("uuid", utils.UUID)
-	RegExport("db", conf.Db)
-	RegExport("rdb", conf.Rdb)
-	RegExport("cfg", conf.Cfg)
-	RegExport("sysCfg", conf.SysCfg)
 	RegExport("sql", mysqlM)
 	RegExport("exp", expM)
 	RegExport("template", templateM)
@@ -116,3 +119,7 @@ func ApplyExportsTo(vm *otto.Otto) {
 		vm.Set(key, v)
 	}
 }
+
+var Module = fx.Options(
+	fx.Invoke(doRegExports),
+)

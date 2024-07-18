@@ -9,14 +9,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"wios_server/conf"
 )
 
 type MailSender struct {
-	User string
-	Pwd  string
-	Host string
-	Port string
+	User    string
+	Pwd     string
+	Host    string
+	Port    string
+	WorkDir string
 }
 type Attachment struct {
 	Fid         string
@@ -80,14 +80,14 @@ func writeHeader(buf *bytes.Buffer, msg *Message) bool {
 	buf.WriteString("\r\n")
 	return haseFile
 }
-func writeAttachment(buf *bytes.Buffer, attach *Attachment) error {
+func (s *MailSender) writeAttachment(buf *bytes.Buffer, attach *Attachment) error {
 	writeStartBoundary(buf)
 	writeKV(buf, "Content-Type", attach.ContentType+";name="+attach.Name)
 	writeKV(buf, "Content-Disposition", "attachment;filename="+attach.Name)
 	writeKV(buf, "Content-Transfer-Encoding", "base64")
 	buf.WriteString("\r\n")
 	if attach.Fid != "" {
-		basePath := path.Join(conf.Cfg.FileServer.SaveDir, GetFPathByFid(attach.Fid))
+		basePath := path.Join(s.WorkDir, GetFPathByFid(attach.Fid))
 		path := filepath.Join(basePath, "0")
 		_, err := os.Stat(path)
 		if err != nil {
@@ -118,9 +118,9 @@ func writeAttachment(buf *bytes.Buffer, attach *Attachment) error {
 	writeEndBoundary(buf)
 	return nil
 }
-func writeAttachments(buf *bytes.Buffer, msg *Message) error {
+func (s *MailSender) writeAttachments(buf *bytes.Buffer, msg *Message) error {
 	for _, attach := range msg.Attachments {
-		err := writeAttachment(buf, &attach)
+		err := s.writeAttachment(buf, &attach)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func (s *MailSender) Send(msg Message) error {
 	writeBlock(buf, msg.Body)
 	//write attachments
 	if hasFile {
-		err := writeAttachments(buf, &msg)
+		err := s.writeAttachments(buf, &msg)
 		if err != nil {
 			return err
 		}

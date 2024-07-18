@@ -1,12 +1,13 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 	"time"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/beans"
 	"wios_server/handlers/msg"
@@ -17,10 +18,11 @@ import (
 
 type UserController struct {
 	userService *service.UserService
+	ut          *utils.Utils
 }
 
-func NewUserController(app *gin.Engine) *UserController {
-	ctrl := &UserController{userService: service.NewUserService(conf.Db)}
+func NewUserController(app *gin.Engine, db *sql.DB, ut *utils.Utils, log *zap.Logger) *UserController {
+	ctrl := &UserController{userService: service.NewUserService(db, log), ut: ut}
 	group := app.Group("/user")
 	hds := []middlewares.Auth{
 		{Method: "GET", Group: "/user", Path: "/initRoot", Handler: ctrl.initRootUser},
@@ -98,7 +100,7 @@ func (ctrl *UserController) saveUpdate(ctx *gin.Context) {
 	}
 	if *userInfo.User.Id == *user.Id {
 		userInfo.User = &user
-		utils.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
+		_ = ctrl.ut.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
 	}
 	user.Password = ""
 	user.Seed = nil
@@ -136,7 +138,7 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 
 	CID, _ := ctx.Cookie(middlewares.UserSessionIDKey)
 	if CID != "" {
-		utils.DelFromRedis(CID)
+		ctrl.ut.DelFromRedis(CID)
 	}
 	CID = utils.GenerateRandomID()
 	domain := utils.RemoveDomainPort(ctx.Request.Host)
@@ -157,7 +159,7 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 		"roles":       roles,
 		"permissions": pm,
 	}
-	err := utils.SaveObjDataToRedis(CID, infoMap, time.Hour*24)
+	err := ctrl.ut.SaveObjDataToRedis(CID, infoMap, time.Hour*24)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
@@ -182,7 +184,7 @@ func (ctrl *UserController) logout(ctx *gin.Context) {
 		})
 		return
 	}
-	utils.DelFromRedis(CID)
+	ctrl.ut.DelFromRedis(CID)
 	msg.Ok(ctx, nil)
 }
 

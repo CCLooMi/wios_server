@@ -2,11 +2,12 @@ package middlewares
 
 import (
 	"crypto/sha1"
+	"database/sql"
 	"encoding/hex"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/fx"
 	"net/http"
 	"strings"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/service"
@@ -70,7 +71,12 @@ const UserInfoKey = "userInfo"
 const UserSessionIDKey = "CID"
 const ApiInfoKey = "apiInfo"
 
-func AuthCheck(c *gin.Context) {
+type AuthChecker struct {
+	ut         *utils.Utils
+	apiService *service.ApiService
+}
+
+func (a *AuthChecker) AuthCheck(c *gin.Context) {
 	path := c.Request.URL.Path
 	auth := authMap[path]
 	if auth == nil || auth.Auth == "" {
@@ -93,7 +99,7 @@ func AuthCheck(c *gin.Context) {
 
 	// get user info from redis by CID
 	var userInfo = UserInfo{}
-	err = utils.GetObjDataFromRedis(cid, &userInfo)
+	err = a.ut.GetObjDataFromRedis(cid, &userInfo)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "Unauthorized",
@@ -125,9 +131,7 @@ func AuthCheck(c *gin.Context) {
 	c.Next()
 }
 
-var apiService = service.NewApiService(conf.Db)
-
-func ScriptApiAuthCheck(c *gin.Context) {
+func (a *AuthChecker) ScriptApiAuthCheck(c *gin.Context) {
 	var reqBody map[string]interface{}
 	if err := c.BindJSON(&reqBody); err != nil {
 		msg.Error(c, err)
@@ -138,7 +142,7 @@ func ScriptApiAuthCheck(c *gin.Context) {
 		id = utils.UUID()
 	}
 	api := &entity.Api{}
-	apiService.ById(&id, api)
+	a.apiService.ById(&id, api)
 	if api.Id == nil {
 		msg.Error(c, "api not found")
 		return
@@ -152,7 +156,7 @@ func ScriptApiAuthCheck(c *gin.Context) {
 	// check CID value
 	cid, err := c.Cookie(UserSessionIDKey)
 	if err == nil {
-		utils.GetObjDataFromRedis(cid, &userInfo)
+		a.ut.GetObjDataFromRedis(cid, &userInfo)
 	}
 	if api.Status != nil {
 		if *api.Status == "protected" || *api.Status == "private" {
@@ -188,13 +192,13 @@ func ScriptApiAuthCheck(c *gin.Context) {
 	c.Next()
 }
 
-func GetUserInfo(c *gin.Context) *UserInfo {
+func GetUserInfo(c *gin.Context, ut *utils.Utils) *UserInfo {
 	sid, err := c.Cookie(UserSessionIDKey)
 	if err != nil {
 		return nil
 	}
 	var userInfo = UserInfo{}
-	err = utils.GetObjDataFromRedis(sid, &userInfo)
+	err = ut.GetObjDataFromRedis(sid, &userInfo)
 	if err != nil {
 		return nil
 	}
@@ -207,7 +211,7 @@ const StoreSessionIDKey = "SID"
 func GetStoreSessionId(c *gin.Context) (string, error) {
 	return c.Cookie(StoreSessionIDKey)
 }
-func StoreAuthCheck(c *gin.Context) {
+func (a *AuthChecker) StoreAuthCheck(c *gin.Context) {
 	path := c.Request.URL.Path
 	auth := authMap[path]
 	if auth == nil || auth.Auth == "" {
@@ -225,7 +229,7 @@ func StoreAuthCheck(c *gin.Context) {
 	}
 	// get user info from redis by SID
 	var storeUserInfo = StoreUserInfo{}
-	err = utils.GetObjDataFromRedis(sid, &storeUserInfo)
+	err = a.ut.GetObjDataFromRedis(sid, &storeUserInfo)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "Unauthorized",
@@ -236,13 +240,13 @@ func StoreAuthCheck(c *gin.Context) {
 	c.Set(StoreUserInfoKey, &storeUserInfo)
 	c.Next()
 }
-func GetStoreUserInfo(c *gin.Context) *StoreUserInfo {
+func GetStoreUserInfo(c *gin.Context, ut *utils.Utils) *StoreUserInfo {
 	sid, err := c.Cookie(StoreSessionIDKey)
 	if err != nil {
 		return nil
 	}
 	var storeUserInfo = StoreUserInfo{}
-	err = utils.GetObjDataFromRedis(sid, &storeUserInfo)
+	err = ut.GetObjDataFromRedis(sid, &storeUserInfo)
 	if err != nil {
 		return nil
 	}
@@ -253,3 +257,14 @@ func GetStoreUserInfo(c *gin.Context) *StoreUserInfo {
 func checkPermission(userInfo *UserInfo, auth *Auth) bool {
 	return userInfo.Permissions[auth.GetId()]
 }
+
+func newAuthChecker(ut *utils.Utils, db *sql.DB) *AuthChecker {
+	return &AuthChecker{
+		ut:         ut,
+		apiService: service.NewApiService(db, ut),
+	}
+}
+
+var Module = fx.Options(
+	fx.Provide(newAuthChecker),
+)

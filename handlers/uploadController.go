@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
@@ -14,8 +14,8 @@ type UploadController struct {
 	uploadService *service.UploadService
 }
 
-func NewUploadController(app *gin.Engine) *UploadController {
-	ctrl := &UploadController{uploadService: service.NewUploadService(conf.Db)}
+func NewUploadController(app *gin.Engine, db *sql.DB) *UploadController {
+	ctrl := &UploadController{uploadService: service.NewUploadService(db)}
 	group := app.Group("/upload")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/upload", Path: "/byPage", Auth: "upload.list", Handler: ctrl.byPage},

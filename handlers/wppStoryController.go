@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
@@ -15,9 +15,9 @@ type WppStoryController struct {
 	wppStoryService *service.WppStoryService
 }
 
-func NewWppStoryController(app *gin.Engine) *WppStoryController {
+func NewWppStoryController(app *gin.Engine, db *sql.DB) *WppStoryController {
 	ctrl := &WppStoryController{
-		wppStoryService: service.NewWppStoryService(conf.Db),
+		wppStoryService: service.NewWppStoryService(db),
 	}
 	group := app.Group("/wstory")
 	hds := []middlewares.Auth{

@@ -10,10 +10,11 @@ import (
 
 type ApiService struct {
 	*dao.BaseDao
+	ut *utils.Utils
 }
 
-func NewApiService(db *sql.DB) *ApiService {
-	return &ApiService{BaseDao: dao.NewBaseDao(db)}
+func NewApiService(db *sql.DB, ut *utils.Utils) *ApiService {
+	return &ApiService{BaseDao: dao.NewBaseDao(db), ut: ut}
 }
 func (dao *ApiService) ListByPage(pageNumber, pageSize int, fn func(sm *mak.SQLSM)) (int64, []entity.Api, error) {
 	var apis []entity.Api
@@ -43,7 +44,7 @@ func (dao *ApiService) SaveUpdates(apis []entity.Api) []sql.Result {
 
 func (dao *ApiService) Backup() error {
 	a := entity.Api{}
-	return utils.BackupTableDataToCSV(
+	return dao.ut.BackupTableDataToCSV(
 		a.TableName(),
 		"static/bak",
 		"api.backup.csv")

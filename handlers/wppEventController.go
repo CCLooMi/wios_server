@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
@@ -15,9 +15,9 @@ type WppEventController struct {
 	wppEventSercie *service.WppEventService
 }
 
-func NewWppEventController(app *gin.Engine) *WppEventController {
+func NewWppEventController(app *gin.Engine, db *sql.DB) *WppEventController {
 	ctrl := &WppEventController{
-		wppEventSercie: service.NewWppEventService(conf.Db),
+		wppEventSercie: service.NewWppEventService(db),
 	}
 	group := app.Group("/wevent")
 	hds := []middlewares.Auth{

@@ -1,32 +1,35 @@
 package handlers
 
 import (
+	"database/sql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
-	"wios_server/conf"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
 	"wios_server/service"
+	"wios_server/utils"
 )
 
 type WppController struct {
 	wppService         *service.WppService
 	releaseNoteService *service.ReleaseNoteService
 	storeUserService   *service.StoreUserService
+	ut                 *utils.Utils
 }
 
-func NewWppController(app *gin.Engine) *WppController {
+func NewWppController(app *gin.Engine, db *sql.DB, ut *utils.Utils, ac *middlewares.AuthChecker) *WppController {
 	ctrl := &WppController{
-		wppService:         service.NewWppService(conf.Db),
-		releaseNoteService: service.NewReleaseNoteService(conf.Db),
-		storeUserService:   service.NewStoreUserService(conf.Db),
+		wppService:         service.NewWppService(db),
+		releaseNoteService: service.NewReleaseNoteService(db),
+		storeUserService:   service.NewStoreUserService(db),
+		ut:                 ut,
 	}
 	group := app.Group("/wpp")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/wpp", Path: "/topList", Handler: ctrl.topWpps},
 		{Method: "POST", Group: "/wpp", Path: "/byPage", Auth: "wpp.byPage", Handler: ctrl.byPage},
-		{Method: "POST", Group: "/wpp", Path: "/publish", Auth: "#", Handler: ctrl.publish, AuthCheck: middlewares.StoreAuthCheck},
+		{Method: "POST", Group: "/wpp", Path: "/publish", Auth: "#", Handler: ctrl.publish, AuthCheck: ac.StoreAuthCheck},
 		{Method: "POST", Group: "/wpp", Path: "/info", Handler: ctrl.getWppInfo},
 	}
 	for i, hd := range hds {
@@ -135,7 +138,7 @@ func (ctrl *WppController) getWppInfo(ctx *gin.Context) {
 		msg.Error(ctx, "too many ids")
 		return
 	}
-	storeUserInfo := middlewares.GetStoreUserInfo(ctx)
+	storeUserInfo := middlewares.GetStoreUserInfo(ctx, ctrl.ut)
 	var result = make([]map[string]interface{}, 0)
 	for _, wppId := range m {
 		wpp := ctrl.wppService.FindById(&wppId)
