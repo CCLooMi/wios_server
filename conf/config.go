@@ -14,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/fx"
-	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
@@ -201,12 +200,29 @@ func initRedis(lc fx.Lifecycle, config *Config, log *zap.Logger) (*redis.Client,
 // zapWriter is a custom io.Writer that writes to a zap logger
 type zapWriter struct {
 	logger *zap.Logger
+	lv     zapcore.Level
 }
 
 // Write implements the io.Writer interface for zapWriter
 func (w zapWriter) Write(p []byte) (n int, err error) {
-	w.logger.Info(string(p))
-	return len(p), nil
+	pL := len(p)
+	if w.lv == zap.DebugLevel {
+		w.logger.Debug(string(p))
+		return pL, nil
+	}
+	if w.lv == zap.InfoLevel {
+		w.logger.Info(string(p))
+		return pL, nil
+	}
+	if w.lv == zap.WarnLevel {
+		w.logger.Warn(string(p))
+		return pL, nil
+	}
+	if w.lv == zap.ErrorLevel {
+		w.logger.Error(string(p))
+		return pL, nil
+	}
+	return pL, nil
 }
 func setLog(config *Config) *zap.Logger {
 	zapCfg := zap.Config{
@@ -240,9 +256,8 @@ func setLog(config *Config) *zap.Logger {
 	// Redirect stdlib log output to our logger
 	zap.RedirectStdLog(logger)
 	// Set Gin to use zap's logger
-	gin.DefaultWriter = zapWriter{logger: logger}
-	gin.DefaultErrorWriter = zapWriter{logger: logger}
-
+	gin.DefaultWriter = zapWriter{logger: logger, lv: zap.DebugLevel}
+	gin.DefaultErrorWriter = zapWriter{logger: logger, lv: zap.ErrorLevel}
 	// Set log level from configuration
 	logLevel, err := zapcore.ParseLevel(config.LogLevel)
 	if err != nil {
@@ -260,8 +275,9 @@ var Module = fx.Options(
 		initRedis,
 		initPeerId,
 	),
-	fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
-		return &fxevent.ZapLogger{Logger: log}
-	}),
+	//use the zap logger for fx
+	//fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+	//	return &fxevent.ZapLogger{Logger: log}
+	//}),
 	fx.Invoke(LoadSysCfg),
 )
