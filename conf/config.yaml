@@ -36,4 +36,12 @@ dht:
         - /ip6/::/tcp/5001
         - /ip6/::/udp/5001/quic-v1
         - /ip6/::/udp/5001/quic-v1/webtransport
-    bootstrap_nodes: []
+    bootstrap_nodes:
+    bucket_size: 3
+datastore:
+    path: conf/datastore
+    compression: zstd
+    cache_size: 8388608
+    bytes_per_sync: 524288
+    mem_table_size: 67108864
+    max_open_files: 3600

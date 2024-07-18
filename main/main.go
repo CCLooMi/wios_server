@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	pebbleds "github.com/ipfs/go-ds-pebble"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -46,7 +47,7 @@ type blankValidator struct{}
 func (blankValidator) Validate(_ string, _ []byte) error        { return nil }
 func (blankValidator) Select(_ string, _ [][]byte) (int, error) { return 0, nil }
 
-func newDHTNode(log *zap.Logger, pKey crypto.PrivKey, config *conf.Config) *dht.IpfsDHT {
+func newDHTNode(log *zap.Logger, pKey crypto.PrivKey, config *conf.Config, ds *pebbleds.Datastore) *dht.IpfsDHT {
 	ctx := context.Background()
 	host, err := libp2p.New(
 		libp2p.ListenAddrStrings(config.DHTConf.ListenAddrs...),
@@ -59,6 +60,7 @@ func newDHTNode(log *zap.Logger, pKey crypto.PrivKey, config *conf.Config) *dht.
 		dht.ProtocolPrefix("/wios"),
 		dht.Mode(dht.ModeServer),
 		dht.NamespacedValidator("v", blankValidator{}),
+		dht.Datastore(ds),
 	}
 	kadDHT, err := dht.New(ctx, host, baseOpts...)
 	if err != nil {

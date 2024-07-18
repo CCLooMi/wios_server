@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
+	"github.com/cockroachdb/pebble"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
+	pebbleds "github.com/ipfs/go-ds-pebble"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/fx"
@@ -49,24 +51,34 @@ type DHTConfig struct {
 	PrivateKey     string   `yaml:"private_key"`
 	ListenAddrs    []string `yaml:"listen_addrs"`
 	BootstrapNodes []string `yaml:"bootstrap_nodes"`
+	BucketSize     int      `yaml:"bucket_size"`
+}
+type DatastoreConfig struct {
+	Path         string `yaml:"path"`
+	Compression  string `yaml:"compression"`
+	CacheSize    int64  `yaml:"cache_size"`
+	BytesPerSync int    `yaml:"bytes_per_sync"`
+	MemTableSize uint64 `yaml:"mem_table_size"`
+	MaxOpenFiles int    `yaml:"max_open_files"`
 }
 
 // Config 包含应用程序的所有配置信息
 type Config struct {
-	FileServer  FileServerConfig    `yaml:"fileServer"`
-	DB          DBConfig            `yaml:"db"`
-	EnableCORS  bool                `yaml:"enable_cors"`
-	CORSHosts   []string            `yaml:"cors_host_list"`
-	Header      map[string]string   `yaml:"header"`
-	LogLevel    string              `yaml:"log_level"`
-	Port        string              `yaml:"port"`
-	EnableHttps bool                `yaml:"enable_https"`
-	CertFile    string              `yaml:"https_cert_file"`
-	KeyFile     string              `yaml:"https_key_file"`
-	HostConf    map[string]HostConf `yaml:"host_conf"`
-	Redis       RedisConfig         `yaml:"redis"`
-	DHTConf     DHTConfig           `yaml:"dht"`
-	SysConf     map[string]interface{}
+	FileServer    FileServerConfig    `yaml:"fileServer"`
+	DB            DBConfig            `yaml:"db"`
+	EnableCORS    bool                `yaml:"enable_cors"`
+	CORSHosts     []string            `yaml:"cors_host_list"`
+	Header        map[string]string   `yaml:"header"`
+	LogLevel      string              `yaml:"log_level"`
+	Port          string              `yaml:"port"`
+	EnableHttps   bool                `yaml:"enable_https"`
+	CertFile      string              `yaml:"https_cert_file"`
+	KeyFile       string              `yaml:"https_key_file"`
+	HostConf      map[string]HostConf `yaml:"host_conf"`
+	Redis         RedisConfig         `yaml:"redis"`
+	DHTConf       DHTConfig           `yaml:"dht"`
+	DatastoreConf DatastoreConfig     `yaml:"datastore"`
+	SysConf       map[string]interface{}
 }
 
 var CorsHostsMap = make(map[string]bool)
@@ -196,6 +208,48 @@ func initRedis(lc fx.Lifecycle, config *Config, log *zap.Logger) (*redis.Client,
 	})
 	return rdb, nil
 }
+func initPebble(lc fx.Lifecycle, config *Config, log *zap.Logger) (*pebbleds.Datastore, error) {
+	var c = config.DatastoreConf
+	var compression pebble.Compression
+	switch cm := c.Compression; cm {
+	case "zstd", "":
+		compression = pebble.ZstdCompression
+	case "snappy":
+		compression = pebble.SnappyCompression
+	case "default":
+		compression = pebble.DefaultCompression
+	case "none":
+		compression = pebble.NoCompression
+	}
+	if c.CacheSize <= 0 {
+		c.CacheSize = 8 * 1024 * 1024
+	}
+	if c.BytesPerSync <= 0 {
+		c.BytesPerSync = 512 * 1024
+	}
+	if c.MemTableSize <= 0 {
+		c.MemTableSize = 64 * 1024 * 1024
+	}
+	if c.MaxOpenFiles <= 0 {
+		c.MaxOpenFiles = 1000
+	}
+	ds, err := pebbleds.NewDatastore(c.Path, &pebble.Options{
+		BytesPerSync: c.BytesPerSync,
+		Cache:        pebble.NewCache(c.CacheSize),
+		MemTableSize: c.MemTableSize,
+		MaxOpenFiles: c.MaxOpenFiles,
+		Levels: []pebble.LevelOptions{
+			{Compression: compression},
+		},
+	})
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			log.Info("closing datastore")
+			return ds.Close()
+		},
+	})
+	return ds, err
+}
 
 // zapWriter is a custom io.Writer that writes to a zap logger
 type zapWriter struct {
@@ -273,6 +327,7 @@ var Module = fx.Options(
 		setLog,
 		initDB,
 		initRedis,
+		initPebble,
 		initPeerId,
 	),
 	//use the zap logger for fx
