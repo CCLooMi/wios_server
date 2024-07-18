@@ -92,13 +92,6 @@ func LoadConfig(configFile string) (*Config, error) {
 	}
 	return &config, nil
 }
-
-//var Cfg *Config
-//var Db *sql.DB
-//var Rdb *redis.Client
-//var SysCfg = make(map[string]interface{})
-//var cfgName string
-
 func initPeerId(log *zap.Logger, config *Config) crypto.PrivKey {
 	if config.DHTConf.PeerId != "" {
 		pd, err := base64.StdEncoding.DecodeString(config.DHTConf.PrivateKey)
@@ -172,7 +165,6 @@ func saveConfigToFile(config *Config, log *zap.Logger) {
 		return
 	}
 }
-
 func loadConfig() (*Config, error) {
 	return LoadConfig(cfgName)
 }
@@ -258,10 +250,6 @@ func setLog(config *Config) *zap.Logger {
 	}
 	zapCfg.Level.SetLevel(logLevel)
 	return logger
-}
-
-type Fxl struct {
-	logger *zap.Logger
 }
 
 var Module = fx.Options(
