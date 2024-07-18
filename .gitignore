@@ -4,3 +4,4 @@ dist/
 .idea
 /static/public/wios/
 static/upload
+conf/datastore
