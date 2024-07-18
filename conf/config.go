@@ -214,7 +214,7 @@ func setLog(config *Config) *zap.Logger {
 		Development: false,
 		Encoding:    "json",
 		EncoderConfig: zapcore.EncoderConfig{
-			TimeKey:        "timestamp",
+			TimeKey:        "ts",
 			LevelKey:       "level",
 			NameKey:        "logger",
 			CallerKey:      "caller",
