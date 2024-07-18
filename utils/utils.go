@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
+	"github.com/dustin/go-humanize"
 	"github.com/go-redis/redis/v8"
 	"github.com/xuri/excelize/v2"
 	"go.uber.org/fx"
@@ -385,6 +386,34 @@ func IsBlank(v interface{}) bool {
 		return false
 	}
 	return true
+}
+func ParseDuration(t string, dv time.Duration) time.Duration {
+	d, err := time.ParseDuration(t)
+	if err != nil {
+		return dv
+	}
+	return d
+}
+func ParseBytes(s string, df uint64) uint64 {
+	v, err := humanize.ParseBytes(s)
+	if err != nil {
+		return df
+	}
+	return v
+}
+func ParseBytesI64(s string, df int64) int64 {
+	v, err := humanize.ParseBytes(s)
+	if err != nil {
+		return df
+	}
+	return int64(v)
+}
+func ParseBytesI32(s string, df int) int {
+	v, err := humanize.ParseBytes(s)
+	if err != nil {
+		return df
+	}
+	return int(v)
 }
 
 var Module = fx.Options(

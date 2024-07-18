@@ -13,6 +13,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net/http"
+	"time"
 	"wios_server/conf"
 	"wios_server/handlers"
 	"wios_server/js"
@@ -56,11 +57,19 @@ func newDHTNode(log *zap.Logger, pKey crypto.PrivKey, config *conf.Config, ds *p
 	if err != nil {
 		log.Sugar().Fatalf("Failed to create libp2p host: #{err}")
 	}
+	rt := config.DHTConf.Routing
 	baseOpts := []dht.Option{
 		dht.ProtocolPrefix("/wios"),
 		dht.Mode(dht.ModeServer),
 		dht.NamespacedValidator("v", blankValidator{}),
 		dht.Datastore(ds),
+		dht.MaxRecordAge(utils.ParseDuration(config.DHTConf.MaxRecordAge, 48*time.Hour)),
+		dht.RoutingTableLatencyTolerance(utils.ParseDuration(rt.LatencyTolerance, 10*time.Second)),
+		dht.RoutingTableRefreshQueryTimeout(utils.ParseDuration(rt.RefreshQueryTimeout, 10*time.Second)),
+		dht.RoutingTableRefreshPeriod(utils.ParseDuration(rt.RefreshInterval, 10*time.Minute)),
+	}
+	if !rt.AutoRefresh {
+		baseOpts = append(baseOpts, dht.DisableAutoRefresh())
 	}
 	kadDHT, err := dht.New(ctx, host, baseOpts...)
 	if err != nil {

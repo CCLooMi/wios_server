@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/cockroachdb/pebble"
+	"github.com/dustin/go-humanize"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
@@ -47,18 +48,26 @@ type HostConf struct {
 	Header map[string]string `yaml:"header"`
 }
 type DHTConfig struct {
-	PeerId         string   `yaml:"peer_id"`
-	PrivateKey     string   `yaml:"private_key"`
-	ListenAddrs    []string `yaml:"listen_addrs"`
-	BootstrapNodes []string `yaml:"bootstrap_nodes"`
-	BucketSize     int      `yaml:"bucket_size"`
+	PeerId         string           `yaml:"peer_id"`
+	PrivateKey     string           `yaml:"private_key"`
+	ListenAddrs    []string         `yaml:"listen_addrs"`
+	BootstrapNodes []string         `yaml:"bootstrap_nodes"`
+	BucketSize     int              `yaml:"bucket_size"`
+	MaxRecordAge   string           `yaml:"max_record_age"`
+	Routing        DHTRoutingConfig `yaml:"routing"`
+}
+type DHTRoutingConfig struct {
+	LatencyTolerance    string `yaml:"latency_tolerance"`
+	RefreshQueryTimeout string `yaml:"refresh_query_timeout"`
+	RefreshInterval     string `yaml:"refresh_interval"`
+	AutoRefresh         bool   `yaml:"auto_refresh"`
 }
 type DatastoreConfig struct {
 	Path         string `yaml:"path"`
 	Compression  string `yaml:"compression"`
-	CacheSize    int64  `yaml:"cache_size"`
-	BytesPerSync int    `yaml:"bytes_per_sync"`
-	MemTableSize uint64 `yaml:"mem_table_size"`
+	CacheSize    string `yaml:"cache_size"`
+	BytesPerSync string `yaml:"bytes_per_sync"`
+	MemTableSize string `yaml:"mem_table_size"`
 	MaxOpenFiles int    `yaml:"max_open_files"`
 }
 
@@ -221,22 +230,16 @@ func initPebble(lc fx.Lifecycle, config *Config, log *zap.Logger) (*pebbleds.Dat
 	case "none":
 		compression = pebble.NoCompression
 	}
-	if c.CacheSize <= 0 {
-		c.CacheSize = 8 * 1024 * 1024
-	}
-	if c.BytesPerSync <= 0 {
-		c.BytesPerSync = 512 * 1024
-	}
-	if c.MemTableSize <= 0 {
-		c.MemTableSize = 64 * 1024 * 1024
-	}
+	cacheSize := parseBytesI64(c.CacheSize, 8*1024*1024)
+	bytesPerSync := parseBytesI32(c.BytesPerSync, 512*1024)
+	memTableSize := parseBytes(c.MemTableSize, 64*1024*1024)
 	if c.MaxOpenFiles <= 0 {
 		c.MaxOpenFiles = 1000
 	}
 	ds, err := pebbleds.NewDatastore(c.Path, &pebble.Options{
-		BytesPerSync: c.BytesPerSync,
-		Cache:        pebble.NewCache(c.CacheSize),
-		MemTableSize: c.MemTableSize,
+		BytesPerSync: bytesPerSync,
+		Cache:        pebble.NewCache(cacheSize),
+		MemTableSize: memTableSize,
 		MaxOpenFiles: c.MaxOpenFiles,
 		Levels: []pebble.LevelOptions{
 			{Compression: compression},
@@ -319,6 +322,28 @@ func setLog(config *Config) *zap.Logger {
 	}
 	zapCfg.Level.SetLevel(logLevel)
 	return logger
+}
+
+func parseBytes(s string, df uint64) uint64 {
+	v, err := humanize.ParseBytes(s)
+	if err != nil {
+		return df
+	}
+	return v
+}
+func parseBytesI64(s string, df int64) int64 {
+	v, err := humanize.ParseBytes(s)
+	if err != nil {
+		return df
+	}
+	return int64(v)
+}
+func parseBytesI32(s string, df int) int {
+	v, err := humanize.ParseBytes(s)
+	if err != nil {
+		return df
+	}
+	return int(v)
 }
 
 var Module = fx.Options(

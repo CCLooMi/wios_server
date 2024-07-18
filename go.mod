@@ -7,6 +7,8 @@ toolchain go1.22.4
 require (
 	github.com/CCLooMi/sql-mak v0.0.0-20240622041750-0b5be9f5f93c
 	github.com/PuerkitoBio/goquery v1.9.2
+	github.com/cockroachdb/pebble v0.0.0-20231218155426-48b54c29d8fe
+	github.com/dustin/go-humanize v1.0.1
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1
@@ -38,7 +40,6 @@ require (
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/cockroachdb/errors v1.11.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
-	github.com/cockroachdb/pebble v0.0.0-20231218155426-48b54c29d8fe // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
