@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	pebbleds "github.com/ipfs/go-ds-pebble"
 	"github.com/libp2p/go-libp2p"
@@ -12,7 +11,11 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 	"wios_server/conf"
 	"wios_server/handlers"
@@ -37,6 +40,7 @@ func main() {
 				startServer),
 		))
 	fxa.Run()
+	waitForSignal(fxa)
 }
 
 func newGinApp() (*gin.Engine, error) {
@@ -110,15 +114,42 @@ func bootstrapDHT(log *zap.Logger, ctx context.Context, kadDHT *dht.IpfsDHT, boo
 func exportDHT(kadDHT *dht.IpfsDHT) {
 	js.RegExport("dht", kadDHT)
 }
-func startServer(app *gin.Engine, config *conf.Config) {
-	var err error
-	if config.EnableHttps {
-		err = http.ListenAndServeTLS(":"+config.Port,
-			config.CertFile, config.KeyFile, app)
-	} else {
-		err = app.Run(":" + config.Port)
+func startServer(lc fx.Lifecycle, app *gin.Engine, config *conf.Config) {
+	server := &http.Server{
+		Addr:    ":" + config.Port,
+		Handler: app,
 	}
-	if err != nil {
-		fmt.Println("Error starting server:", err)
+	lc.Append(
+		fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				go func() {
+					var err error
+					if config.EnableHttps {
+						err = server.ListenAndServeTLS(config.CertFile, config.KeyFile)
+					} else {
+						err = server.ListenAndServe()
+					}
+					if err != nil {
+						log.Println("Error starting server:", err)
+						return
+					}
+				}()
+				return nil
+			},
+			OnStop: func(ctx context.Context) error {
+				log.Println("Stopping server...")
+				return server.Shutdown(ctx)
+			},
+		},
+	)
+}
+func waitForSignal(app *fx.App) {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := app.Stop(stopCtx); err != nil {
+		log.Println("Failed to stop application:", err)
 	}
 }

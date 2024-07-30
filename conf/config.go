@@ -219,6 +219,9 @@ func initRedis(lc fx.Lifecycle, config *Config, log *zap.Logger) (*redis.Client,
 }
 func initPebble(lc fx.Lifecycle, config *Config, log *zap.Logger) (*pebbleds.Datastore, error) {
 	var c = config.DatastoreConf
+	if c.Path == "" {
+		c.Path = "datastore"
+	}
 	var compression pebble.Compression
 	switch cm := c.Compression; cm {
 	case "zstd", "":

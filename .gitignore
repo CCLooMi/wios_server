@@ -5,3 +5,4 @@ dist/
 /static/public/wios/
 static/upload
 conf/datastore
+datastore
