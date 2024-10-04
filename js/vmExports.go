@@ -9,7 +9,9 @@ import (
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/go-redis/redis/v8"
 	"github.com/robertkrimen/otto"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/fx"
+	"log"
 	"time"
 	"wios_server/conf"
 	"wios_server/utils"
@@ -96,6 +98,22 @@ func doRegExports(ut *utils.Utils, config *conf.Config, db *sql.DB, rdb *redis.C
 	})
 	RegExport("bs2str", func(bs []byte) string {
 		return string(bs)
+	})
+	RegExport("v2bs", func(v interface{}) []byte {
+		bs, e := msgpack.Marshal(v)
+		if e != nil {
+			log.Println(e)
+			return nil
+		}
+		return bs
+	})
+	RegExport("bs2v", func(bs []byte) interface{} {
+		var v interface{}
+		e := msgpack.Unmarshal(bs, &v)
+		if e != nil {
+			log.Println(e)
+		}
+		return v
 	})
 	RegExport("context", map[string]interface{}{
 		"WithCancel":       context.WithCancel,

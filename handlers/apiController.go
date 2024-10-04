@@ -357,6 +357,7 @@ func (ctrl *ApiController) byPage(c *gin.Context) {
 				lik := "%" + q.(string) + "%"
 				sm.AND("(a.id = ? OR a.desc LIKE ? OR a.category LIKE ?)", q, lik, lik)
 			}
+			sm.ORDER_BY("a.updated_at DESC", "a.inserted_at DESC", "a.id")
 		})
 	})
 }
