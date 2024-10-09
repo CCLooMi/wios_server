@@ -13,6 +13,8 @@ cors_host_list:
     - github.com
     - gitea:3000
     - bing.com
+    - www.dpm.org.cn
+    - img.dpm.org.cn
 header:
     Access-Control-Allow-Headers: Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization
     server: wios_server

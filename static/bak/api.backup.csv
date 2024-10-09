@@ -1,9 +1,74 @@
 id,desc,script,type,category,status,inserted_at,updated_at,inserted_by,updated_by
+076839523698cbdc7e0e7ec5abbefe28,获取亚马逊仓库信息,"var url = ""http://www.jiufanglogistics.cn/channel/1/fbackdz"";
+var a = fetch(url);
+var q = ""[id='accordion'] .panel-title>a,[id='accordion'] .panel-body"";
+var doc = $(a.response);
+if (doc == null) {
+    false;
+} else {
+    var data = {};
+    var eles = doc.Find(q);
+    var L = eles.Length();
+    for (var i = 0; i < L; i += 2) {
+        var t = eles.Eq(i).Text().trim();
+        if (!endsWith(t, ""亚马逊仓库地址清单"")) {
+            continue;
+        }
+        t = t.substring(0, t.length - 9);
+        var d = getTableData(eles.Eq(i + 1));
+        data[t] = d;
+    }
+    data;
+}
+function getTableData(d) {
+    var trs = d.Find('table tr');
+    var L = trs.Length();
+    var title;
+    var list = [];
+    for (var i = 0; i < L; i++) {
+        var tri = trs.Eq(i);
+        var cL = tri.Children().Length();
+        if(cL<5){
+            continue;
+        }
+        if (!title) {
+            title = getTrData(tri);
+            continue;
+        }
+        list.push(getTrData(tri, title));
+    }
+    return list;
+}
+function getTrData(tr, t) {
+    var tds = tr.Find('td');
+    var L = tds.Length();
+    if (!t) {
+        var list = [];
+        for (var i = 0; i < L; i++) {
+            var ti = tds.Eq(i).Text().trim();
+            if(ti==""地址""){
+                list.push(""Addr"");
+                continue;
+            }
+            list.push(ti);
+        }
+        return list;
+    }
+    var o = {};
+    for (var i = 0; i < L; i++) {
+        o[t[i]]=tds.Eq(i).Text().trim();
+    }
+    return o;
+}
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}",,script,,2024-06-21T22:04:59+08:00,2024-06-21T23:16:38+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 21dd8b2f7d1062d6ab08af557e3e391f,loop,"self.Title=""Loop""
 while(true){
     console.log(""Task running!""+new Date())
     sleep(1000)
 }",,script,,2024-05-12T21:12:25+08:00,2024-05-15T19:17:49+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+34e6cb6e8eaa3b25e6e19284db566606,获取DHT路由表Size,dht.RoutingTable().Size(),,script,,2024-07-11T19:52:15+08:00,2024-07-11T19:52:27+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 40abf772c8c670033e6704713272f67d,Template test,"var ts = sysCfg[""code.verify.template""];
 var a = template.Apply(ts,{code:989890,year:2024});
 if(a[1]){
@@ -44,12 +109,25 @@ function getFlagInfo(d,data){
     }
     data[t.Text().trim()]=flags;
 }",,script,,2024-04-10T16:32:26+08:00,2024-04-11T10:53:47+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+960c6512d24bf055c8f4c00169220dce,send mail with files demo,"sendMailWithFiles(
+    ""Test Files"",
+    ""File List"",
+    [""seemie@wios.cloud""],
+    ""025aa5d210a2bbab71de92613b0885978a43e59c7897657050b2df697e074c5d"",
+    ""a.jpeg"",
+    ""089b040711795293846fce0cfc07d56fc5f986deb7f8f6855ab08f2b9f480b46"",
+    ""b.jpeg""
+)",,script,,2024-05-31T16:31:36+08:00,2024-05-31T16:31:36+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 ac60584a5c9a432dd1881cd6501c0bd9,系统配置查询,"var data = sql.SELECT(""c.value"")
     .FROM(""sys_config"", ""c"")
     .WHERE(""c.name=?"", args[0])
     .Execute(db)
     .GetResultAsList();
 JSON.parse(data);",,,,2024-03-28T19:08:34+08:00,2024-04-11T10:53:52+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+bb4913c521d995892f42ac8c8aa310e8,Bing images,"var url = ""https://bing.com/HPImageArchive.aspx?format=js&n=8"";
+var a= fetch(url,{});
+a = JSON.parse(a.response);
+a.images;",,api,,2024-06-13T08:50:43+08:00,2024-06-13T09:09:49+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 be0d1312ddf59a4b0864b91277b76900,银联国际汇率查询,"
 var url = getUrl(0);
 var rsp = fetch(url,{method:""GET""});
@@ -78,6 +156,67 @@ c4abb167ea8395cfd0dded69a9736932,海关编码分页查询,"byPage(function (sm, 
     }
 });
 false;",,,,2024-03-28T18:32:53+08:00,2024-04-11T10:53:54+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+c98ed2a11cf383c0fd503fc18f4a6767,获取故宫壁纸,"var po = args[0]||{page:1};
+var pN = po.page?po.page:1;
+// var url = 'https://www.dpm.org.cn/searchs/royal/category_id/173/p/'+pN+'.html';
+var url = ""https://www.dpm.org.cn/searchs/royalb.html?category_id=624&pagesize=16&is_pc=1&is_wap=0&is_calendar=0&is_four_k=1&p=""+pN;
+var r = fetch(url);
+var doc = $(r.response);
+var eles = doc.Find('#datalist .list-item>.img .download-pop,#datalist .list-item>.img>a');
+var bs = {
+    2:[2,""1280x800""],3:[3,""1680x1050""],4:[4,""1920x1080""],1:[1,""1920x1080""],
+    14:[14,""1920x1280""],12:[12,""2560x1440""],6:[6,""1080x1920""],
+    15:[15,""1280x1920""],7:[7,""1125x2436""],11:[11,""1248x2778""],10:[10,""800x600""],
+    8:[8,""2732x2732""],9:[9,""2048x2048""]
+    }
+var imgs = [];
+for (var i = 0; i < eles.Length(); i += 2) {
+    var ei = eles.Eq(i);
+    var daI = ei.Find("".download-list .download-txtbox"");
+    var imgI = eles.Eq(i+1).Find(""img"");
+    var src = ""https://img.dpm.org.cn""+imgI.AttrOr(""src"", """");
+    var size={};
+    for(var k in bs){
+        var ki = daI.Find(""[data-size='""+k+""']"");
+        if(ki.Length()){
+            var v = bs[k];
+            size[v[0]]=v[1];
+        }
+    }
+    var id = parseInt(ei.AttrOr(""primaryid"",""""));
+    var href;
+    if(size[""4""]){
+        href = ""https://www.dpm.org.cn/download/lights_image/id/""+id+""/img_size/4.html"";
+    }else{
+        href=src;
+    }
+    imgs.push({ id: id,size:size,src:src,href:href});
+}
+var t = doc.Find("".aggs[data-all]"");
+var total = parseInt(t.AttrOr(""data-all"", ""0""),10);
+/**
+ * litpic13="""" litpic12="""" litpic2="""" litpic3="""" litpic4="""" litpic11="""" litpic6="""" litpic7="""" litpic8="""" litpic9="""" litpic10=""1"" 
+ */
+({
+    data: imgs,
+    total: total,
+    baseUrl: ""https://www.dpm.org.cn""
+});",,api,,2024-06-26T15:28:12+08:00,2024-10-04T18:14:26+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+d2aa577745ad8b00f2d8ee5ce8f2bda6,查询亚马逊某卖家产品列表,"var url =""https://www.amazon.com/s?me=A1O0JIKRUZNJ9&marketplaceID=ATVPDKIKX0DER"";
+var selector = '.s-search-results [data-asin]:not([data-asin=""""])>div>div>span>div>div>div>div';
+var a = fetch(url);
+var doc = $(a.response);
+var ls = doc.Find(selector);
+var L = ls.Length();
+for(var i=0;i<L;i++){
+    var d0 = ls.Eq(i);
+}",,api,,2024-07-25T20:00:40+08:00,2024-07-25T20:22:40+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+dc56e0c788bd4bded21c9955a857141a,dht set get test,"var ctx = context.Background();
+//dht.PutValue(ctx,""/v/name"",str2bs(""Seemie""));
+//dht.PutValue(ctx,""/v/name"",v2bs({name:""Seemie"",age:19}));
+var a = dht.GetValue(ctx,""/v/name"");
+// bs2str(a[0])
+bs2v(a[0]);",,,,2024-07-10T19:49:15+08:00,2024-10-04T08:58:55+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 f4670379cd150a73ede8b125be44251f,Fetch currency info,"var url = ""https://www.ifreesite.com/currency.htm"";
 var a = fetch(url);
 var q="".tooltext> div.if_titlename,table.if_tabletd>tbody tbody"";
@@ -111,3 +250,6 @@ function getCurrencyInfo(d){
     }
     return infos;
 }",,script,,2024-04-10T10:54:22+08:00,2024-04-11T10:53:57+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+f6015dbafd5331ec3ab9b71f2c6c9d33,对象序列化和反序列化测试,"var a = v2bs({name:""Seemie"",age:16});
+var o = bs2v(a);
+o;",,script,,2024-10-04T08:30:22+08:00,2024-10-04T08:30:22+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
