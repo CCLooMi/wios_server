@@ -70,6 +70,9 @@ type DatastoreConfig struct {
 	MemTableSize string `yaml:"mem_table_size"`
 	MaxOpenFiles int    `yaml:"max_open_files"`
 }
+type FutuApiConfig struct {
+	ApiAddr string `yaml:"api_addr"`
+}
 
 // Config 包含应用程序的所有配置信息
 type Config struct {
@@ -88,6 +91,7 @@ type Config struct {
 	DHTConf       DHTConfig           `yaml:"dht"`
 	DatastoreConf DatastoreConfig     `yaml:"datastore"`
 	SysConf       map[string]interface{}
+	FutuApiConf   FutuApiConfig `yaml:"futu_api_conf"`
 }
 
 var CorsHostsMap = make(map[string]bool)
@@ -211,8 +215,13 @@ func initRedis(lc fx.Lifecycle, config *Config, log *zap.Logger) (*redis.Client,
 	})
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
-			log.Info("closing redis connection")
-			return rdb.Close()
+			go func() {
+				log.Info("closing redis connection")
+				if err := rdb.Close(); err != nil {
+					log.Sugar().Errorf("failed to close redis connection: %s", err)
+				}
+			}()
+			return nil
 		},
 	})
 	return rdb, nil
@@ -250,8 +259,13 @@ func initPebble(lc fx.Lifecycle, config *Config, log *zap.Logger) (*pebbleds.Dat
 	})
 	lc.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
-			log.Info("closing datastore")
-			return ds.Close()
+			go func() {
+				log.Info("closing datastore")
+				if err := ds.Close(); err != nil {
+					log.Sugar().Errorf("failed to close datastore: %w", err)
+				}
+			}()
+			return nil
 		},
 	})
 	return ds, err

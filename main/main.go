@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	futuapi "github.com/CCLooMi/go-futu-api"
+	"github.com/eatmoreapple/openwechat"
 	"github.com/gin-gonic/gin"
 	pebbleds "github.com/ipfs/go-ds-pebble"
 	"github.com/libp2p/go-libp2p"
@@ -34,10 +38,14 @@ func main() {
 		fx.Options(
 			fx.Provide(
 				newGinApp,
-				newDHTNode),
+				newDHTNode,
+				newFutuApi,
+				newWechatBot),
 			fx.Invoke(
-				exportDHT,
-				startServer),
+				regExport,
+				startServer,
+				connectFutuApi,
+				startWechatBot),
 		))
 	fxa.Run()
 	waitForSignal(fxa)
@@ -111,8 +119,10 @@ func bootstrapDHT(log *zap.Logger, ctx context.Context, kadDHT *dht.IpfsDHT, boo
 	return kadDHT.Bootstrap(ctx)
 }
 
-func exportDHT(kadDHT *dht.IpfsDHT) {
+func regExport(kadDHT *dht.IpfsDHT, api *futuapi.FutuAPI, bot *openwechat.Bot, config *conf.Config) {
 	js.RegExport("dht", kadDHT)
+	js.RegExport("futuapi", js.NewFTApi(api, &config.FutuApiConf))
+	js.RegExport("webot", js.NewWebot(bot))
 }
 func startServer(lc fx.Lifecycle, app *gin.Engine, config *conf.Config) {
 	server := &http.Server{
@@ -137,8 +147,14 @@ func startServer(lc fx.Lifecycle, app *gin.Engine, config *conf.Config) {
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				log.Println("Stopping server...")
-				return server.Shutdown(ctx)
+				go func() {
+					log.Println("Stopping server...")
+					if err := server.Shutdown(ctx); err != nil {
+						log.Println("Error stopping server:", err)
+						return
+					}
+				}()
+				return nil
 			},
 		},
 	)
@@ -152,4 +168,77 @@ func waitForSignal(app *fx.App) {
 	if err := app.Stop(stopCtx); err != nil {
 		log.Println("Failed to stop application:", err)
 	}
+}
+func newFutuApi(config *conf.Config) *futuapi.FutuAPI {
+	api := futuapi.NewFutuAPI()
+	api.SetClientInfo(config.DHTConf.PeerId, 1)
+	return api
+}
+func connectFutuApi(lc fx.Lifecycle, api *futuapi.FutuAPI, config *conf.Config) *futuapi.FutuAPI {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			go func() {
+				for {
+					err := api.Connect(context.Background(), config.FutuApiConf.ApiAddr)
+					if err != nil {
+						log.Printf("Failed to connect to Futu API, retrying in 1 second: %v", err)
+						time.Sleep(1 * time.Second)
+						continue
+					}
+					log.Println("Successfully connected to Futu API.")
+					break
+				}
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			go func() {
+				if err := api.Close(ctx); err != nil {
+					log.Printf("Failed to close Futu API: %v", err)
+				}
+				log.Println("Successfully closed Futu API.")
+			}()
+			return nil
+		},
+	})
+	return api
+}
+
+func newWechatBot(config *conf.Config) *openwechat.Bot {
+	bot := openwechat.DefaultBot(openwechat.Desktop)
+	bot.MessageHandler = func(msg *openwechat.Message) {
+		jss, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(string(jss))
+		}
+		if msg.IsText() && msg.Content == "ping" {
+			msg.ReplyText("pong")
+		}
+	}
+	bot.UUIDCallback = openwechat.PrintlnQrcodeUrl
+	return bot
+}
+func startWechatBot(lc fx.Lifecycle, bot *openwechat.Bot, config *conf.Config) *openwechat.Bot {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			go func() {
+				err := bot.Login()
+				if err != nil {
+					return
+				}
+				bot.Block()
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			go func() {
+				bot.Exit()
+				log.Println("WechatBot stopped.")
+			}()
+			return nil
+		},
+	})
+	return bot
 }

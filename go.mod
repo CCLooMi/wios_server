@@ -1,14 +1,13 @@
 module wios_server
 
-go 1.21
-
-toolchain go1.22.4
+go 1.22.4
 
 require (
 	github.com/CCLooMi/sql-mak v0.0.0-20240622041750-0b5be9f5f93c
 	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/cockroachdb/pebble v0.0.0-20231218155426-48b54c29d8fe
 	github.com/dustin/go-humanize v1.0.1
+	github.com/futuopen/ftapi4go v0.0.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1
@@ -28,7 +27,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+replace github.com/futuopen/ftapi4go => ./github.com/futuopen/ftapi4go
+
 require (
+	github.com/CCLooMi/go-futu-api v0.0.0-20241017033608-e1eba21405b3 // indirect
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
@@ -49,6 +51,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/eatmoreapple/openwechat v1.4.8 // indirect
 	github.com/elastic/gosigar v0.14.3 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
@@ -179,7 +182,7 @@ require (
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	gonum.org/v1/gonum v0.15.0 // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
+	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
 )

@@ -53,3 +53,5 @@ datastore:
     bytes_per_sync: 512kb
     mem_table_size: 64m
     max_open_files: 3600
+futu_api_conf:
+    api_addr: 127.0.0.1:11111
