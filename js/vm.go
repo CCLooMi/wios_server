@@ -30,15 +30,8 @@ func (vm *Vm) Cleanup() {
 		f()
 	}
 }
-func (vm *Vm) RegFinalizer(f func()) {
-	vm.cleanupFuncs = append(vm.cleanupFuncs, func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("Run Cleanup func failed: %v\n", r)
-			}
-		}()
-		f()
-	})
+func (vm *Vm) Finally(f func()) {
+	vm.cleanupFuncs = append(vm.cleanupFuncs, makFunc(f))
 }
 func (vm *Vm) Exit() string {
 	vm.otto.Interrupt <- func() {
@@ -106,5 +99,15 @@ func closeChannel(c chan func()) {
 	case c <- func() {}:
 		close(c)
 	default:
+	}
+}
+func makFunc(f func()) func() {
+	return func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("Run Cleanup func failed: %v\n", r)
+			}
+		}()
+		f()
 	}
 }

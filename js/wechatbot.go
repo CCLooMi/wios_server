@@ -14,10 +14,12 @@ type Webot struct {
 }
 
 func NewWebot(bot *openwechat.Bot) *Webot {
-	return &Webot{bot,
+	wb := &Webot{bot,
 		make([]func(msg *openwechat.Message), 0),
 		sync.Mutex{},
 	}
+	bot.MessageHandler = wb.handleMessage
+	return wb
 }
 
 func (w *Webot) GetCurrentUser() (*openwechat.Self, error) {
@@ -69,12 +71,15 @@ func (w *Webot) SendText(msg string, to string, update bool) ([]*openwechat.Sent
 	})
 	return ss, nil
 }
-func (w *Webot) OnMsg(handler func(msg *openwechat.Message)) func() {
+func (w *Webot) OnMsg(handler func(msg *openwechat.Message), vm *Vm) {
+	if handler == nil || vm == nil {
+		return
+	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.handlers = append(w.handlers, handler)
 	index := len(w.handlers) - 1
-	return func() {
+	vm.Finally(func() {
 		w.mu.Lock()
 		defer w.mu.Unlock()
 		if index < len(w.handlers) && w.handlers[index] != nil {
@@ -83,12 +88,11 @@ func (w *Webot) OnMsg(handler func(msg *openwechat.Message)) func() {
 		if len(w.handlers) > 0 && float64(w.nilCount())/float64(len(w.handlers)) > 0.3 {
 			w.compactHandlers()
 		}
-	}
+	})
 }
-func (w *Webot) HandleMessage(msg *openwechat.Message) {
+func (w *Webot) handleMessage(msg *openwechat.Message) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-
 	for _, handler := range w.handlers {
 		if handler != nil {
 			handler(msg)
