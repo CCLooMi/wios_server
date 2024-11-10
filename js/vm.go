@@ -47,6 +47,7 @@ func (vm *Vm) Set(key string, value interface{}) error {
 func (vm *Vm) Execute(script string) (otto.Value, error) {
 	start := time.Now()
 	defer func() {
+		delete(vmMap, vm.ID)
 		duration := time.Since(start)
 		if caught := recover(); caught != nil {
 			if caught == halt {
