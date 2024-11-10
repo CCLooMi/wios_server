@@ -29,6 +29,18 @@ func (f *FTApi) ConnID() uint64 {
 func (f *FTApi) GetGlobalState(ctx context.Context) (*getglobalstate.S2C, error) {
 	return f.fapi.GetGlobalState(ctx)
 }
+func (f *FTApi) IsConnected(ctx context.Context) bool {
+	if _, err := f.fapi.GetGlobalState(ctx); err != nil {
+		return false
+	}
+	return true
+}
+func (f *FTApi) Connect(ctx context.Context) error {
+	if f.IsConnected(ctx) {
+		return nil
+	}
+	return f.fapi.Connect(ctx, f.conf.ApiAddr)
+}
 func (f *FTApi) GetAccList(ctx context.Context,
 	category trdcommon.TrdCategory, generalAcc bool) ([]*trdcommon.TrdAcc, error) {
 	return f.fapi.GetAccList(ctx, category,

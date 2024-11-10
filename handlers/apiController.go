@@ -1,24 +1,9 @@
 package handlers
 
 import (
-	"bytes"
 	"database/sql"
-	"errors"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
-	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
-	"github.com/robertkrimen/otto"
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/charmap"
-	"golang.org/x/text/encoding/japanese"
-	"golang.org/x/text/encoding/korean"
-	"golang.org/x/text/encoding/simplifiedchinese"
-	"golang.org/x/text/encoding/traditionalchinese"
-	"golang.org/x/text/encoding/unicode"
-	"io"
-	"net/http"
-	"strings"
-	"time"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/js"
@@ -53,28 +38,6 @@ func NewApiController(app *gin.Engine, db *sql.DB, ut *utils.Utils, ac *middlewa
 	return ctrl
 }
 
-var halt = errors.New("Stahp")
-
-func closeChannel(c chan func()) {
-	select {
-	case c <- func() {}:
-		close(c)
-	default:
-	}
-}
-
-type vmMeta struct {
-	Title *string       `json:"title"`
-	User  *entity.User  `json:"user"`
-	Exit  func() string `json:"-"`
-}
-
-func (vm *vmMeta) SetTitle(t *string) {
-	vm.Title = t
-}
-
-var vmMap = make(map[string]*vmMeta)
-
 func (ctrl *ApiController) runUnsafe(unsafe string, title *string, c *gin.Context, args interface{}, reqBody map[string]interface{}) {
 	ui, ok := c.Get("userInfo")
 	if !ok {
@@ -86,45 +49,13 @@ func (ctrl *ApiController) runUnsafe(unsafe string, title *string, c *gin.Contex
 		msg.Error(c, "userInfo not found")
 		return
 	}
-
-	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		if caught := recover(); caught != nil {
-			if caught == halt {
-				msg.Error(c, "Stopping after: "+duration.String())
-				return
-			}
-			// Something else happened, repanic!
-			panic(caught)
-		}
-	}()
-	vmId := utils.UUID()
-	vm := otto.New()
-	vm.Interrupt = make(chan func(), 1)
-	var exit = func() string {
-		vm.Interrupt <- func() {
-			panic(halt)
-		}
-		delete(vmMap, vmId)
-		closeChannel(vm.Interrupt)
-		return "vm[" + vmId + "] exited."
-	}
-	var self = vmMeta{Title: title, User: userInfo.User, Exit: exit}
-	vmMap[vmId] = &self
-	defer closeChannel(vm.Interrupt)
-	defer delete(vmMap, vmId)
+	var vm = js.NewVm(title, userInfo.User)
+	defer vm.Cleanup()
 	vm.Set("ctx", c)
 	vm.Set("reqBody", reqBody)
-	vm.Set("msgOk", func(data any) {
-		msg.Ok(c, data)
-	})
-	vm.Set("msgError", func(err any) {
-		msg.Error(c, err)
-	})
-	vm.Set("msgOks", func(data ...any) {
-		msg.Oks(c, data...)
-	})
+	vm.Set("userInfo", userInfo)
+	vm.Set("args", args)
+	vm.Set("msg", js.NewMsgUtil(c))
 	vm.Set("byPage", func(f func(sm *mak.SQLSM, opts interface{})) {
 		middlewares.ByPageMap(reqBody, c, func(page *middlewares.Page) (int64, any, error) {
 			if page.PageNumber < 0 {
@@ -142,28 +73,7 @@ func (ctrl *ApiController) runUnsafe(unsafe string, title *string, c *gin.Contex
 			return -1, out, nil
 		})
 	})
-	vm.Set("fetch", func(url string, opts ...interface{}) map[string]interface{} {
-		result, err := fetch(url, opts...)
-		if err != nil {
-			msg.Error(c, err.Error())
-			return nil
-		}
-		return result
-	})
-	vm.Set("$", func(str string) *goquery.Document {
-		result, error := goquery.NewDocumentFromReader(strings.NewReader(str))
-		if error != nil {
-			msg.Error(c, error.Error())
-			return nil
-		}
-		return result
-	})
-	vm.Set("userInfo", userInfo)
-	vm.Set("args", args)
-	vm.Set("exit", exit)
-	vm.Set("self", &self)
-	js.ApplyExportsTo(vm)
-	result, err := vm.Run(unsafe)
+	result, err := vm.Execute(unsafe)
 	if err != nil {
 		msg.Error(c, err.Error())
 		return
@@ -177,137 +87,8 @@ func (ctrl *ApiController) runUnsafe(unsafe string, title *string, c *gin.Contex
 	msg.Ok(c, result)
 	return
 }
-func getStrDecode(name string) *encoding.Decoder {
-	switch strings.ToUpper(name) {
-	case "UTF8", "UTF-8":
-		return unicode.UTF8.NewDecoder()
-	case "GBK", "GB2312":
-		return simplifiedchinese.GBK.NewDecoder()
-	case "GB18030":
-		return simplifiedchinese.GB18030.NewDecoder()
-	case "BIG5":
-		return traditionalchinese.Big5.NewDecoder()
-	case "ISO-8859-1":
-		return charmap.ISO8859_1.NewDecoder()
-	case "ISO-8859-2":
-		return charmap.ISO8859_2.NewDecoder()
-	case "ISO-8859-3":
-		return charmap.ISO8859_3.NewDecoder()
-	case "ISO-8859-4":
-		return charmap.ISO8859_4.NewDecoder()
-	case "ISO-8859-5":
-		return charmap.ISO8859_5.NewDecoder()
-	case "ISO-8859-6":
-		return charmap.ISO8859_6.NewDecoder()
-	case "ISO-8859-7":
-		return charmap.ISO8859_7.NewDecoder()
-	case "ISO-8859-8":
-		return charmap.ISO8859_8.NewDecoder()
-	case "ISO-8859-9":
-		return charmap.ISO8859_9.NewDecoder()
-	case "ISO-8859-10":
-		return charmap.ISO8859_10.NewDecoder()
-	case "WINDOWS-1250":
-		return charmap.Windows1250.NewDecoder()
-	case "WINDOWS-1251":
-		return charmap.Windows1251.NewDecoder()
-	case "WINDOWS-1252":
-		return charmap.Windows1252.NewDecoder()
-	case "WINDOWS-1253":
-		return charmap.Windows1253.NewDecoder()
-	case "WINDOWS-1254":
-		return charmap.Windows1254.NewDecoder()
-	case "WINDOWS-1255":
-		return charmap.Windows1255.NewDecoder()
-	case "WINDOWS-1256":
-		return charmap.Windows1256.NewDecoder()
-	case "WINDOWS-1257":
-		return charmap.Windows1257.NewDecoder()
-	case "WINDOWS-1258":
-		return charmap.Windows1258.NewDecoder()
-	case "KOI8-R":
-		return korean.EUCKR.NewDecoder()
-	case "EUC-JP":
-		return japanese.EUCJP.NewDecoder()
-	case "ISO-2022-JP":
-		return japanese.ISO2022JP.NewDecoder()
-	case "UTF-16", "UTF-16BE":
-		return unicode.UTF16(unicode.BigEndian, unicode.UseBOM).NewDecoder()
-	case "UTF-16LE":
-		return unicode.UTF16(unicode.LittleEndian, unicode.UseBOM).NewDecoder()
-	}
-	return unicode.UTF8.NewDecoder()
-}
-
-const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-
-func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
-	var opts map[string]interface{}
-	if len(o) > 0 {
-		opts = o[0].(map[string]interface{})
-	} else {
-		opts = map[string]interface{}{}
-	}
-	method, ok := opts["method"].(string)
-	if !ok {
-		method = "GET"
-	}
-	var body string
-	if bodyInterface, ok := opts["body"]; ok {
-		body = bodyInterface.(string)
-	}
-	req, err := http.NewRequest(method, url, bytes.NewBufferString(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", userAgent)
-	headers, ok := opts["headers"].(map[string]interface{})
-	if ok {
-		for k, v := range headers {
-			req.Header.Set(k, v.(string))
-		}
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	charset, ok := opts["charset"].(string)
-	if !ok {
-		charset = "UTF8"
-	}
-	decode := getStrDecode(charset)
-	rspBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	dc, err := decode.Bytes(rspBody)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]interface{}{
-		"response":   string(dc),
-		"request":    resp.Request,
-		"status":     resp.Status,
-		"statusCode": resp.StatusCode,
-		"header":     resp.Header,
-		"cookies": func() []*http.Cookie {
-			return resp.Cookies()
-		},
-	}, nil
-}
-
 func (ctrl *ApiController) vms(c *gin.Context) {
-	//msg.Ok(c, vmMap)
-	data := make([]interface{}, 0)
-	for k, v := range vmMap {
-		data = append(data, map[string]interface{}{
-			"id":    k,
-			"title": v.Title,
-			"user":  v.User.Nickname,
-		})
-	}
+	data := js.VMList()
 	msg.Ok(c, map[string]interface{}{
 		"data":  data,
 		"total": len(data),
@@ -315,12 +96,7 @@ func (ctrl *ApiController) vms(c *gin.Context) {
 }
 func (ctrl *ApiController) stopVmById(c *gin.Context) {
 	vmId := c.Query("id")
-	vm := vmMap[vmId]
-	if vm == nil {
-		msg.Error(c, "vm not found")
-		return
-	}
-	msg.Ok(c, vm.Exit())
+	msg.Ok(c, js.StopVM(vmId))
 }
 func (ctrl *ApiController) execute(c *gin.Context) {
 	var reqBody map[string]interface{}
