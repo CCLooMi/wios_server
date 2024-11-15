@@ -100,7 +100,7 @@ func (ctrl *UserController) saveUpdate(ctx *gin.Context) {
 	}
 	if *userInfo.User.Id == *user.Id {
 		userInfo.User = &user
-		_ = ctrl.ut.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
+		_ = ctrl.ut.SaveObjDataToCache(userInfo.Id, userInfo, time.Hour*24)
 	}
 	user.Password = ""
 	user.Seed = nil
@@ -138,7 +138,7 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 
 	CID, _ := ctx.Cookie(middlewares.UserSessionIDKey)
 	if CID != "" {
-		ctrl.ut.DelFromRedis(CID)
+		ctrl.ut.DelFromCache(CID)
 	}
 	CID = utils.GenerateRandomID()
 	domain := utils.RemoveDomainPort(ctx.Request.Host)
@@ -159,7 +159,7 @@ func (ctrl *UserController) login(ctx *gin.Context) {
 		"roles":       roles,
 		"permissions": pm,
 	}
-	err := ctrl.ut.SaveObjDataToRedis(CID, infoMap, time.Hour*24)
+	err := ctrl.ut.SaveObjDataToCache(CID, infoMap, time.Hour*24)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
@@ -184,7 +184,7 @@ func (ctrl *UserController) logout(ctx *gin.Context) {
 		})
 		return
 	}
-	ctrl.ut.DelFromRedis(CID)
+	ctrl.ut.DelFromCache(CID)
 	msg.Ok(ctx, nil)
 }
 

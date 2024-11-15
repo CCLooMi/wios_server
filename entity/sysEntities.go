@@ -150,3 +150,14 @@ type Config struct {
 func (*Config) TableName() string {
 	return "sys_config"
 }
+
+type Session struct {
+	entity.IdEntity
+	Data    *string `orm:"longtext comment '数据'" column:"data" json:"data"`
+	Expires *int64  `orm:"bigint comment '过期时间'" column:"expires" json:"expires"`
+	entity.TimeEntity
+}
+
+func (*Session) TableName() string {
+	return "sys_session"
+}

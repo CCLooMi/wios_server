@@ -99,7 +99,7 @@ func (a *AuthChecker) AuthCheck(c *gin.Context) {
 
 	// get user info from redis by CID
 	var userInfo = UserInfo{}
-	err = a.ut.GetObjDataFromRedis(cid, &userInfo)
+	err = a.ut.GetObjDataFromCache(cid, &userInfo)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "Unauthorized",
@@ -156,7 +156,7 @@ func (a *AuthChecker) ScriptApiAuthCheck(c *gin.Context) {
 	// check CID value
 	cid, err := c.Cookie(UserSessionIDKey)
 	if err == nil {
-		a.ut.GetObjDataFromRedis(cid, &userInfo)
+		a.ut.GetObjDataFromCache(cid, &userInfo)
 	}
 	if api.Status != nil {
 		if *api.Status == "protected" || *api.Status == "private" {
@@ -198,7 +198,7 @@ func GetUserInfo(c *gin.Context, ut *utils.Utils) *UserInfo {
 		return nil
 	}
 	var userInfo = UserInfo{}
-	err = ut.GetObjDataFromRedis(sid, &userInfo)
+	err = ut.GetObjDataFromCache(sid, &userInfo)
 	if err != nil {
 		return nil
 	}
@@ -229,7 +229,7 @@ func (a *AuthChecker) StoreAuthCheck(c *gin.Context) {
 	}
 	// get user info from redis by SID
 	var storeUserInfo = StoreUserInfo{}
-	err = a.ut.GetObjDataFromRedis(sid, &storeUserInfo)
+	err = a.ut.GetObjDataFromCache(sid, &storeUserInfo)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"message": "Unauthorized",
@@ -246,7 +246,7 @@ func GetStoreUserInfo(c *gin.Context, ut *utils.Utils) *StoreUserInfo {
 		return nil
 	}
 	var storeUserInfo = StoreUserInfo{}
-	err = ut.GetObjDataFromRedis(sid, &storeUserInfo)
+	err = ut.GetObjDataFromCache(sid, &storeUserInfo)
 	if err != nil {
 		return nil
 	}

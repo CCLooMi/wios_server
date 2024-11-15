@@ -70,12 +70,12 @@ type redisStore struct {
 }
 
 func (c *redisStore) Set(id string, value string) error {
-	return c.ut.SaveKVToRedis(id, value, c.Expire)
+	return c.ut.SaveKVToCache(id, value, c.Expire)
 }
 func (c *redisStore) Get(key string, clear bool) string {
-	v, _ := c.ut.GetValueFromRedis(key)
+	v, _ := c.ut.GetValueFromCache(key)
 	if clear {
-		c.ut.DelFromRedis(key)
+		c.ut.DelFromCache(key)
 	}
 	return v
 }
@@ -241,7 +241,7 @@ func (ctrl *StoreUserController) update(ctx *gin.Context) {
 	}
 	userInfo := ctx.MustGet(middlewares.StoreUserInfoKey).(*middlewares.StoreUserInfo)
 	userInfo.User = &storeUser
-	ctrl.ut.SaveObjDataToRedis(userInfo.Id, userInfo, time.Hour*24)
+	ctrl.ut.SaveObjDataToCache(userInfo.Id, userInfo, time.Hour*24)
 	storeUser.Password = ""
 	storeUser.Seed = nil
 	msg.Ok(ctx, &storeUser)
@@ -277,7 +277,7 @@ func (ctrl *StoreUserController) login(ctx *gin.Context) {
 	}
 	SID, _ := ctx.Cookie(middlewares.StoreSessionIDKey)
 	if SID != "" {
-		ctrl.ut.DelFromRedis(SID)
+		ctrl.ut.DelFromCache(SID)
 	}
 	SID = utils.GenerateRandomID()
 	domain := utils.RemoveDomainPort(ctx.Request.Host)
@@ -296,7 +296,7 @@ func (ctrl *StoreUserController) login(ctx *gin.Context) {
 		"id":   SID,
 		"user": storeUser,
 	}
-	err := ctrl.ut.SaveObjDataToRedis(SID, infoMap, time.Hour*24)
+	err := ctrl.ut.SaveObjDataToCache(SID, infoMap, time.Hour*24)
 	if err != nil {
 		msg.Error(ctx, err.Error())
 		return
@@ -317,6 +317,6 @@ func (ctrl *StoreUserController) logout(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"msg": "unauthorized"})
 		return
 	}
-	ctrl.ut.DelFromRedis(SID)
+	ctrl.ut.DelFromCache(SID)
 	msg.Ok(ctx, nil)
 }

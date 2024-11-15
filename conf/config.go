@@ -11,7 +11,6 @@ import (
 	"github.com/cockroachdb/pebble"
 	"github.com/dustin/go-humanize"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	pebbleds "github.com/ipfs/go-ds-pebble"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -37,11 +36,6 @@ type DBConfig struct {
 	Port     string `yaml:"port"`
 	Name     string `yaml:"name"`
 	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-}
-type RedisConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
 	Password string `yaml:"password"`
 }
 type HostConf struct {
@@ -87,7 +81,6 @@ type Config struct {
 	CertFile      string              `yaml:"https_cert_file"`
 	KeyFile       string              `yaml:"https_key_file"`
 	HostConf      map[string]HostConf `yaml:"host_conf"`
-	Redis         RedisConfig         `yaml:"redis"`
 	DHTConf       DHTConfig           `yaml:"dht"`
 	DatastoreConf DatastoreConfig     `yaml:"datastore"`
 	SysConf       map[string]interface{}
@@ -206,25 +199,6 @@ func initDB(lc fx.Lifecycle, config *Config, log *zap.Logger) (*sql.DB, error) {
 		},
 	})
 	return db, nil
-}
-func initRedis(lc fx.Lifecycle, config *Config, log *zap.Logger) (*redis.Client, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", config.Redis.Host, config.Redis.Port),
-		Password: config.Redis.Password,
-		DB:       0,
-	})
-	lc.Append(fx.Hook{
-		OnStop: func(ctx context.Context) error {
-			go func() {
-				log.Info("closing redis connection")
-				if err := rdb.Close(); err != nil {
-					log.Sugar().Errorf("failed to close redis connection: %s", err)
-				}
-			}()
-			return nil
-		},
-	})
-	return rdb, nil
 }
 func initPebble(lc fx.Lifecycle, config *Config, log *zap.Logger) (*pebbleds.Datastore, error) {
 	var c = config.DatastoreConf
@@ -368,7 +342,6 @@ var Module = fx.Options(
 		loadConfig,
 		setLog,
 		initDB,
-		initRedis,
 		initPebble,
 		initPeerId,
 	),

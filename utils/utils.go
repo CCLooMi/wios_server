@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/dustin/go-humanize"
-	"github.com/go-redis/redis/v8"
 	"github.com/xuri/excelize/v2"
 	"go.uber.org/fx"
 	"html/template"
@@ -25,38 +24,84 @@ import (
 	"strings"
 	"time"
 	"wios_server/conf"
+	"wios_server/entity"
 )
 
 type Utils struct {
 	Config  *conf.Config
 	Db      *sql.DB
-	Rdb     *redis.Client
 	MSender *MailSender
 }
 
-func (u *Utils) SaveObjDataToRedis(key string, obj any, expire time.Duration) error {
+func (u *Utils) SaveObjDataToCache(key string, obj any, expire time.Duration) error {
 	data, err := json.Marshal(obj)
 	if err != nil {
 		return err
 	}
-	return u.Rdb.
-		Set(context.Background(), key, data, expire).
-		Err()
-}
-func (u *Utils) SaveKVToRedis(key string, value string, expire time.Duration) error {
-	return u.Rdb.
-		Set(context.Background(), key, value, expire).
-		Err()
-}
-func (u *Utils) GetValueFromRedis(key string) (string, error) {
-	data, err := u.Rdb.Get(context.Background(), key).Result()
-	if err != nil {
-		return "", err
+	d := string(data)
+	s := &entity.Session{
+		Data: &d,
 	}
-	return data, nil
+	s.Id = &key
+	exp := int64(expire.Milliseconds())
+	s.Expires = &exp
+	r := mysql.INSERT_INTO(s).
+		ON_DUPLICATE_KEY_UPDATE().
+		SET("data = ?", d).
+		Execute(u.Db).Update()
+	_, error := r.RowsAffected()
+	return error
 }
-func (u *Utils) GetObjDataFromRedis(key string, out interface{}) error {
-	data, err := u.Rdb.Get(context.Background(), key).Result()
+func (u *Utils) SaveKVToCache(key string, value string, expire time.Duration) error {
+	s := &entity.Session{
+		Data: &value,
+	}
+	s.Id = &key
+	exp := int64(expire.Milliseconds())
+	s.Expires = &exp
+	r := mysql.INSERT_INTO(s).
+		ON_DUPLICATE_KEY_UPDATE().
+		SET("data = ?", value).
+		Execute(u.Db).Update()
+	_, err := r.RowsAffected()
+	return err
+}
+func (u *Utils) GetValueFromCache(key string) (string, error) {
+	var data string
+	var err error
+	mysql.SELECT("data").
+		FROM(&entity.Session{}, "s").
+		WHERE("s.id = ?", key).
+		Execute(u.Db).
+		ExtractorResultSet(func(rs *sql.Rows) interface{} {
+			for rs.Next() {
+				err = rs.Scan(&data)
+				if err != nil {
+					return nil
+				}
+				return data
+			}
+			return nil
+		})
+	return data, err
+}
+func (u *Utils) GetObjDataFromCache(key string, out interface{}) error {
+	var data string
+	var err error
+	mysql.SELECT("data").
+		FROM(&entity.Session{}, "s").
+		WHERE("s.id = ?", key).
+		Execute(u.Db).
+		ExtractorResultSet(func(rs *sql.Rows) interface{} {
+			for rs.Next() {
+				err := rs.Scan(&data)
+				if err != nil {
+					return nil
+				}
+				return data
+			}
+			return nil
+		})
 	if err != nil {
 		return err
 	}
@@ -71,8 +116,12 @@ func (u *Utils) OpenExcelByFid(fid string) (*excelize.File, error) {
 	}
 	return nil, err
 }
-func (u *Utils) DelFromRedis(key string) {
-	u.Rdb.Del(context.Background(), key)
+func (u *Utils) DelFromCache(key string) {
+	mysql.DELETE().
+		FROM(&entity.Session{}).
+		WHERE("id = ?", key).
+		Execute(u.Db).
+		Update()
 }
 func (u *Utils) DelFileByFid(fid string) bool {
 	bid, err := hex.DecodeString(fid)
@@ -161,11 +210,10 @@ func (u *Utils) SendMailWithFiles(subject string, body *string, to []string, fs 
 	})
 }
 
-func newUtils(config *conf.Config, db *sql.DB, rdb *redis.Client, mailSender *MailSender) *Utils {
+func newUtils(config *conf.Config, db *sql.DB, mailSender *MailSender) *Utils {
 	return &Utils{
 		Config:  config,
 		Db:      db,
-		Rdb:     rdb,
 		MSender: mailSender,
 	}
 }

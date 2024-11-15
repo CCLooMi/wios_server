@@ -10,7 +10,6 @@ import (
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
 	"github.com/robertkrimen/otto"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/fx"
@@ -83,13 +82,12 @@ var templateM = templateStruct{
 }
 var vmFuncs = make(map[string]interface{})
 
-func doRegExports(ut *utils.Utils, config *conf.Config, db *sql.DB, rdb *redis.Client) {
+func doRegExports(ut *utils.Utils, config *conf.Config, db *sql.DB) {
 	RegExport("openExcelById", ut.OpenExcelByFid)
 	RegExport("delFileById", ut.DelFileByFid)
 	RegExport("sendMail", ut.SendMail)
 	RegExport("sendMailWithFiles", ut.SendMailWithFiles)
 	RegExport("db", db)
-	RegExport("rdb", rdb)
 	RegExport("cfg", config)
 	RegExport("sysCfg", config.SysConf)
 	RegExport("lookupDNSRecord", utils.LookupDNSRecord)

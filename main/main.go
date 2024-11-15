@@ -181,8 +181,7 @@ func connectFutuApi(lc fx.Lifecycle, api *futuapi.FutuAPI, config *conf.Config) 
 				for {
 					err := api.Connect(context.Background(), config.FutuApiConf.ApiAddr)
 					if err != nil {
-						log.Printf("Failed to connect to Futu API, retrying in 1 second: %v", err)
-						time.Sleep(1 * time.Second)
+						time.Sleep(10 * time.Second)
 						continue
 					}
 					log.Println("Successfully connected to Futu API.")
