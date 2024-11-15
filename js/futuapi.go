@@ -49,16 +49,41 @@ func (f *FTApi) GetAccList(ctx context.Context,
 	return f.fapi.GetAccList(ctx, category,
 		&futuapi.OptionalBool{Value: generalAcc})
 }
-func (f *FTApi) GetFunds(ctx context.Context, acc *trdcommon.TrdAcc, refresh bool) (*trdcommon.Funds, error) {
-	ma := acc.TrdMarketAuthList[0]
-	return f.fapi.GetFunds(ctx,
-		&trdcommon.TrdHeader{
-			TrdEnv:    acc.TrdEnv,
-			TrdMarket: proto.Int32(ma),
-			AccID:     acc.AccID,
-		}, &futuapi.OptionalBool{
-			Value: refresh,
-		}, trdcommon.Currency(ma))
+func getMktCurrency(mkt int32) trdcommon.Currency {
+	switch mkt {
+	case 1, 4, 10, 113:
+		return trdcommon.Currency_Currency_HKD
+	case 2, 11, 123:
+		return trdcommon.Currency_Currency_USD
+	case 3, 5, 31, 32:
+		return trdcommon.Currency_Currency_CNH
+	case 6, 12, 41:
+		return trdcommon.Currency_Currency_SGD
+	case 13, 51:
+		return trdcommon.Currency_Currency_JPY
+	default:
+		return trdcommon.Currency_Currency_Unknown
+	}
+}
+func (f *FTApi) GetFunds(ctx context.Context, acc *trdcommon.TrdAcc, refresh bool) ([]*trdcommon.Funds, error) {
+	var fds []*trdcommon.Funds = make([]*trdcommon.Funds, 0)
+	var e error
+	for _, mkt := range acc.TrdMarketAuthList {
+		fd, err := f.fapi.GetFunds(ctx,
+			&trdcommon.TrdHeader{
+				TrdEnv:    acc.TrdEnv,
+				TrdMarket: proto.Int32(mkt),
+				AccID:     acc.AccID,
+			}, &futuapi.OptionalBool{
+				Value: refresh,
+			}, getMktCurrency(mkt))
+		fds = append(fds, fd)
+		if err != nil {
+			e = err
+			break
+		}
+	}
+	return fds, e
 }
 func (f *FTApi) GetPositions(ctx context.Context, acc *trdcommon.TrdAcc, refresh bool) ([]*trdcommon.Position, error) {
 	return f.fapi.GetPositionList(ctx,
