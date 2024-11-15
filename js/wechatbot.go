@@ -1,10 +1,16 @@
 package js
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/eatmoreapple/openwechat"
+	"go.uber.org/fx"
+	"log"
 	"math"
 	"regexp"
 	"sync"
+	"wios_server/conf"
 )
 
 type Webot struct {
@@ -122,3 +128,51 @@ func (w *Webot) compactHandlers() {
 	}
 	w.handlers = newHandlers
 }
+func newWechatBot(config *conf.Config) *openwechat.Bot {
+	bot := openwechat.DefaultBot(openwechat.Desktop)
+	bot.MessageHandler = func(msg *openwechat.Message) {
+		jss, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(string(jss))
+		}
+		if msg.IsText() && msg.Content == "ping" {
+			msg.ReplyText("pong")
+		}
+	}
+	bot.UUIDCallback = openwechat.PrintlnQrcodeUrl
+	return bot
+}
+func startWechatBot(lc fx.Lifecycle, bot *openwechat.Bot, config *conf.Config) *openwechat.Bot {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			go func() {
+				err := bot.Login()
+				if err != nil {
+					return
+				}
+				bot.Block()
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			go func() {
+				bot.Exit()
+				log.Println("WechatBot stopped.")
+			}()
+			return nil
+		},
+	})
+	return bot
+}
+
+var webotModule = fx.Options(
+	fx.Provide(newWechatBot),
+	fx.Invoke(
+		startWechatBot,
+		func(bot *openwechat.Bot) {
+			RegExport("webot", NewWebot(bot))
+		},
+	),
+)

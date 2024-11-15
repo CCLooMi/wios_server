@@ -10,8 +10,11 @@ import (
 	"github.com/futuopen/ftapi4go/pb/qotrequesthistorykl"
 	"github.com/futuopen/ftapi4go/pb/trdcommon"
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/fx"
 	"golang.org/x/net/context"
+	"log"
 	"math"
+	"time"
 	"wios_server/conf"
 )
 
@@ -121,3 +124,47 @@ func (f *FTApi) GetMarketState(ctx context.Context, codes ...string) ([]*qotgetm
 	}
 	return f.fapi.GetMarketState(ctx, secs)
 }
+
+func newFutuApi(config *conf.Config) *futuapi.FutuAPI {
+	api := futuapi.NewFutuAPI()
+	api.SetClientInfo(config.DHTConf.PeerId, 1)
+	return api
+}
+func connectFutuApi(lc fx.Lifecycle, api *futuapi.FutuAPI, config *conf.Config) *futuapi.FutuAPI {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			go func() {
+				for {
+					err := api.Connect(context.Background(), config.FutuApiConf.ApiAddr)
+					if err != nil {
+						time.Sleep(10 * time.Second)
+						continue
+					}
+					log.Println("Successfully connected to Futu API.")
+					break
+				}
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			go func() {
+				if err := api.Close(ctx); err != nil {
+					log.Printf("Failed to close Futu API: %v", err)
+				}
+				log.Println("Successfully closed Futu API.")
+			}()
+			return nil
+		},
+	})
+	return api
+}
+
+var futuApiModule = fx.Options(
+	fx.Provide(newFutuApi),
+	fx.Invoke(
+		connectFutuApi,
+		func(fapi *futuapi.FutuAPI, config *conf.Config) {
+			RegExport("futuapi", NewFTApi(fapi, &config.FutuApiConf))
+		},
+	),
+)
