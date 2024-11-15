@@ -38,7 +38,6 @@ func (vm *Vm) Exit() string {
 		panic(halt)
 	}
 	delete(vmMap, vm.ID)
-	closeChannel(vm.otto.Interrupt)
 	return "vm[" + vm.ID + "] exited."
 }
 func (vm *Vm) Set(key string, value interface{}) error {
@@ -51,7 +50,7 @@ func (vm *Vm) Execute(script string) (otto.Value, error) {
 		duration := time.Since(start)
 		if caught := recover(); caught != nil {
 			if caught == halt {
-				log.Fatalf("JSVM[%s] Stopping after: %s", vm.ID, duration.String())
+				log.Printf("JSVM[%s] Stopping after: %s", vm.ID, duration.String())
 				return
 			}
 			// Something else happened, repanic!
