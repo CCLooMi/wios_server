@@ -124,7 +124,66 @@ func (f *FTApi) GetMarketState(ctx context.Context, codes ...string) ([]*qotgetm
 	}
 	return f.fapi.GetMarketState(ctx, secs)
 }
-
+func (f *FTApi) TrdMarketName(i int32) string {
+	return trdcommon.TrdMarket_name[i]
+}
+func (f *FTApi) TrdEnvName(i int32) string {
+	return trdcommon.TrdEnv_name[i]
+}
+func (f *FTApi) TrdCategoryName(i int32) string {
+	return trdcommon.TrdCategory_name[i]
+}
+func (f *FTApi) TrdSecMarketName(i int32) string {
+	return trdcommon.TrdSecMarket_name[i]
+}
+func (f *FTApi) TrdSideName(i int32) string {
+	return trdcommon.TrdSide_name[i]
+}
+func (f *FTApi) OrderTypeName(i int32) string {
+	return trdcommon.OrderType_name[i]
+}
+func (f *FTApi) TrailTypeName(i int32) string {
+	return trdcommon.TrailType_name[i]
+}
+func (f *FTApi) OrderStatusName(i int32) string {
+	return trdcommon.OrderStatus_name[i]
+}
+func (f *FTApi) OrderFillStatusName(i int32) string {
+	return trdcommon.OrderFillStatus_name[i]
+}
+func (f *FTApi) PositionSideName(i int32) string {
+	return trdcommon.PositionSide_name[i]
+}
+func (f *FTApi) TrdAccTypeName(i int32) string {
+	return trdcommon.TrdAccType_name[i]
+}
+func (f *FTApi) TrdAccStatusName(i int32) string {
+	return trdcommon.TrdAccStatus_name[i]
+}
+func (f *FTApi) CurrencyName(i int32) string {
+	return trdcommon.Currency_name[i]
+}
+func (f *FTApi) CltRiskLevelName(i int32) string {
+	return trdcommon.CltRiskLevel_name[i]
+}
+func (f *FTApi) TimeInForceName(i int32) string {
+	return trdcommon.TimeInForce_name[i]
+}
+func (f *FTApi) SecurityFirmName(i int32) string {
+	return trdcommon.SecurityFirm_name[i]
+}
+func (f *FTApi) SimAccTypeName(i int32) string {
+	return trdcommon.SimAccType_name[i]
+}
+func (f *FTApi) CltRiskStatusName(i int32) string {
+	return trdcommon.CltRiskStatus_name[i]
+}
+func (f *FTApi) DTStatusName(i int32) string {
+	return trdcommon.DTStatus_name[i]
+}
+func (f *FTApi) ModifyOrderOpName(i int32) string {
+	return trdcommon.ModifyOrderOp_name[i]
+}
 func newFutuApi(config *conf.Config) *futuapi.FutuAPI {
 	api := futuapi.NewFutuAPI()
 	api.SetClientInfo(config.DHTConf.PeerId, 1)
