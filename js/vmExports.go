@@ -309,5 +309,6 @@ func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
 var Module = fx.Options(
 	futuApiModule,
 	webotModule,
+	dhtModule,
 	fx.Invoke(doRegExports),
 )
