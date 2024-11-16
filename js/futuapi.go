@@ -9,6 +9,7 @@ import (
 	"github.com/futuopen/ftapi4go/pb/qotgetusersecuritygroup"
 	"github.com/futuopen/ftapi4go/pb/qotrequesthistorykl"
 	"github.com/futuopen/ftapi4go/pb/trdcommon"
+	"github.com/futuopen/ftapi4go/pb/trdplaceorder"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/fx"
 	"golang.org/x/net/context"
@@ -49,6 +50,48 @@ func (f *FTApi) GetAccList(ctx context.Context,
 	return f.fapi.GetAccList(ctx, category,
 		&futuapi.OptionalBool{Value: generalAcc})
 }
+func (f *FTApi) GetCNSimAcc(ctx context.Context, generalAcc bool) (*trdcommon.TrdAcc, error) {
+	a, err := f.GetAccList(ctx, trdcommon.TrdCategory_TrdCategory_Security, generalAcc)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range a {
+		if *v.TrdEnv == int32(trdcommon.TrdEnv_TrdEnv_Simulate) {
+			if v.TrdMarketAuthList[0] == int32(trdcommon.TrdMarket_TrdMarket_CN) {
+				return v, nil
+			}
+		}
+	}
+	return nil, nil
+}
+func (f *FTApi) GetUSSimAcc(ctx context.Context, generalAcc bool) (*trdcommon.TrdAcc, error) {
+	a, err := f.GetAccList(ctx, trdcommon.TrdCategory_TrdCategory_Security, generalAcc)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range a {
+		if *v.TrdEnv == int32(trdcommon.TrdEnv_TrdEnv_Simulate) {
+			if v.TrdMarketAuthList[0] == int32(trdcommon.TrdMarket_TrdMarket_US) {
+				return v, nil
+			}
+		}
+	}
+	return nil, nil
+}
+func (f *FTApi) GetHKSimAcc(ctx context.Context, generalAcc bool) (*trdcommon.TrdAcc, error) {
+	a, err := f.GetAccList(ctx, trdcommon.TrdCategory_TrdCategory_Security, generalAcc)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range a {
+		if *v.TrdEnv == int32(trdcommon.TrdEnv_TrdEnv_Simulate) {
+			if v.TrdMarketAuthList[0] == int32(trdcommon.TrdMarket_TrdMarket_HK) {
+				return v, nil
+			}
+		}
+	}
+	return nil, nil
+}
 func getMktCurrency(mkt int32) trdcommon.Currency {
 	switch mkt {
 	case 1, 4, 10, 113:
@@ -65,25 +108,16 @@ func getMktCurrency(mkt int32) trdcommon.Currency {
 		return trdcommon.Currency_Currency_Unknown
 	}
 }
-func (f *FTApi) GetFunds(ctx context.Context, acc *trdcommon.TrdAcc, refresh bool) ([]*trdcommon.Funds, error) {
-	var fds []*trdcommon.Funds = make([]*trdcommon.Funds, 0)
-	var e error
-	for _, mkt := range acc.TrdMarketAuthList {
-		fd, err := f.fapi.GetFunds(ctx,
-			&trdcommon.TrdHeader{
-				TrdEnv:    acc.TrdEnv,
-				TrdMarket: proto.Int32(mkt),
-				AccID:     acc.AccID,
-			}, &futuapi.OptionalBool{
-				Value: refresh,
-			}, getMktCurrency(mkt))
-		fds = append(fds, fd)
-		if err != nil {
-			e = err
-			break
-		}
-	}
-	return fds, e
+func (f *FTApi) GetFunds(ctx context.Context, acc *trdcommon.TrdAcc, refresh bool) (*trdcommon.Funds, error) {
+	mkt := acc.TrdMarketAuthList[0]
+	return f.fapi.GetFunds(ctx,
+		&trdcommon.TrdHeader{
+			TrdEnv:    acc.TrdEnv,
+			TrdMarket: proto.Int32(mkt),
+			AccID:     acc.AccID,
+		}, &futuapi.OptionalBool{
+			Value: refresh,
+		}, getMktCurrency(mkt))
 }
 func (f *FTApi) GetPositions(ctx context.Context, acc *trdcommon.TrdAcc, refresh bool) ([]*trdcommon.Position, error) {
 	return f.fapi.GetPositionList(ctx,
@@ -149,8 +183,119 @@ func (f *FTApi) GetMarketState(ctx context.Context, codes ...string) ([]*qotgetm
 	}
 	return f.fapi.GetMarketState(ctx, secs)
 }
+func (f *FTApi) PlaceOrder(ctx context.Context, acc *trdcommon.TrdAcc, trdSide trdcommon.TrdSide, sec *qotcommon.Security, qty float64, price float64, remark string, orderType trdcommon.OrderType) (*trdplaceorder.S2C, error) {
+	return f.fapi.PlaceOrder(ctx,
+		&trdcommon.TrdHeader{
+			TrdEnv:    acc.TrdEnv,
+			TrdMarket: sec.Market,
+			AccID:     acc.AccID,
+		},
+		trdSide, orderType, *sec.Code, qty,
+		&futuapi.OptionalDouble{Value: price},
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: 0},
+		trdcommon.TrdSecMarket(*sec.Market), remark,
+		trdcommon.TimeInForce_TimeInForce_GTC,
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: price},
+		trdcommon.TrailType_TrailType_Ratio,
+		&futuapi.OptionalDouble{Value: 1},
+		&futuapi.OptionalDouble{Value: 0},
+	)
+}
+func (f *FTApi) PlaceBuyOrder(ctx context.Context, acc *trdcommon.TrdAcc, sec *qotcommon.Security, qty float64, price float64, remark string) (*trdplaceorder.S2C, error) {
+	return f.fapi.PlaceOrder(ctx,
+		&trdcommon.TrdHeader{
+			TrdEnv:    acc.TrdEnv,
+			TrdMarket: sec.Market,
+			AccID:     acc.AccID,
+		},
+		trdcommon.TrdSide_TrdSide_Buy,
+		trdcommon.OrderType_OrderType_Normal, *sec.Code, qty,
+		&futuapi.OptionalDouble{Value: price},
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: 0},
+		trdcommon.TrdSecMarket(*sec.Market), remark,
+		trdcommon.TimeInForce_TimeInForce_GTC,
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: price},
+		trdcommon.TrailType_TrailType_Ratio,
+		&futuapi.OptionalDouble{Value: 1},
+		&futuapi.OptionalDouble{Value: 0},
+	)
+}
+func (f *FTApi) PlaceSellOrder(ctx context.Context, acc *trdcommon.TrdAcc, sec *qotcommon.Security, qty float64, price float64, remark string) (*trdplaceorder.S2C, error) {
+	return f.fapi.PlaceOrder(ctx,
+		&trdcommon.TrdHeader{
+			TrdEnv:    acc.TrdEnv,
+			TrdMarket: sec.Market,
+			AccID:     acc.AccID,
+		},
+		trdcommon.TrdSide_TrdSide_Sell,
+		trdcommon.OrderType_OrderType_Normal, *sec.Code, qty,
+		&futuapi.OptionalDouble{Value: price},
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: 0},
+		trdcommon.TrdSecMarket(*sec.Market), remark,
+		trdcommon.TimeInForce_TimeInForce_GTC,
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: price},
+		trdcommon.TrailType_TrailType_Ratio,
+		&futuapi.OptionalDouble{Value: 1},
+		&futuapi.OptionalDouble{Value: 0},
+	)
+}
+func (f *FTApi) PlaceMktBuyOrder(ctx context.Context, acc *trdcommon.TrdAcc, sec *qotcommon.Security, qty float64, price float64, remark string) (*trdplaceorder.S2C, error) {
+	return f.fapi.PlaceOrder(ctx,
+		&trdcommon.TrdHeader{
+			TrdEnv:    acc.TrdEnv,
+			TrdMarket: sec.Market,
+			AccID:     acc.AccID,
+		},
+		trdcommon.TrdSide_TrdSide_Buy,
+		trdcommon.OrderType_OrderType_Market, *sec.Code, qty,
+		&futuapi.OptionalDouble{Value: price},
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: 0},
+		trdcommon.TrdSecMarket(*sec.Market), remark,
+		trdcommon.TimeInForce_TimeInForce_GTC,
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: price},
+		trdcommon.TrailType_TrailType_Ratio,
+		&futuapi.OptionalDouble{Value: 1},
+		&futuapi.OptionalDouble{Value: 0},
+	)
+}
+func (f *FTApi) PlaceMktSellOrder(ctx context.Context, acc *trdcommon.TrdAcc, sec *qotcommon.Security, qty float64, price float64, remark string) (*trdplaceorder.S2C, error) {
+	return f.fapi.PlaceOrder(ctx,
+		&trdcommon.TrdHeader{
+			TrdEnv:    acc.TrdEnv,
+			TrdMarket: sec.Market,
+			AccID:     acc.AccID,
+		},
+		trdcommon.TrdSide_TrdSide_Sell,
+		trdcommon.OrderType_OrderType_Market, *sec.Code, qty,
+		&futuapi.OptionalDouble{Value: price},
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: 0},
+		trdcommon.TrdSecMarket(*sec.Market), remark,
+		trdcommon.TimeInForce_TimeInForce_GTC,
+		&futuapi.OptionalBool{Value: true},
+		&futuapi.OptionalDouble{Value: price},
+		trdcommon.TrailType_TrailType_Ratio,
+		&futuapi.OptionalDouble{Value: 1},
+		&futuapi.OptionalDouble{Value: 0},
+	)
+}
 func (f *FTApi) TrdMarketName(i int32) string {
 	return trdcommon.TrdMarket_name[i]
+}
+func (f *FTApi) TrdMarketNames(i ...int32) []string {
+	names := make([]string, 0, len(i))
+	for _, v := range i {
+		names = append(names, trdcommon.TrdMarket_name[v])
+	}
+	return names
 }
 func (f *FTApi) TrdEnvName(i int32) string {
 	return trdcommon.TrdEnv_name[i]
@@ -160,6 +305,13 @@ func (f *FTApi) TrdCategoryName(i int32) string {
 }
 func (f *FTApi) TrdSecMarketName(i int32) string {
 	return trdcommon.TrdSecMarket_name[i]
+}
+func (f *FTApi) TrdSecMarketNames(i ...int32) []string {
+	names := make([]string, 0, len(i))
+	for _, v := range i {
+		names = append(names, trdcommon.TrdSecMarket_name[v])
+	}
+	return names
 }
 func (f *FTApi) TrdSideName(i int32) string {
 	return trdcommon.TrdSide_name[i]
@@ -187,6 +339,22 @@ func (f *FTApi) TrdAccStatusName(i int32) string {
 }
 func (f *FTApi) CurrencyName(i int32) string {
 	return trdcommon.Currency_name[i]
+}
+func (f *FTApi) MktCurrency(i int32) int32 {
+	return int32(getMktCurrency(i))
+}
+func (f *FTApi) MktCurrencyName(i int32) string {
+	return trdcommon.Currency_name[int32(getMktCurrency(i))]
+}
+func (f *FTApi) MktCurrencyNames(i ...int32) []string {
+	names := make([]string, 0, len(i))
+	for _, v := range i {
+		names = append(names, trdcommon.Currency_name[int32(getMktCurrency(v))])
+	}
+	return names
+}
+func (f *FTApi) GetAccCurrencyNames(acc *trdcommon.TrdAcc) []string {
+	return f.MktCurrencyNames(acc.TrdMarketAuthList...)
 }
 func (f *FTApi) CltRiskLevelName(i int32) string {
 	return trdcommon.CltRiskLevel_name[i]
