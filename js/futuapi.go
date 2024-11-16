@@ -45,8 +45,7 @@ func (f *FTApi) Connect(ctx context.Context) error {
 	}
 	return f.fapi.Connect(ctx, f.conf.ApiAddr)
 }
-func (f *FTApi) GetAccList(ctx context.Context,
-	category trdcommon.TrdCategory, generalAcc bool) ([]*trdcommon.TrdAcc, error) {
+func (f *FTApi) GetAccList(ctx context.Context, category trdcommon.TrdCategory, generalAcc bool) ([]*trdcommon.TrdAcc, error) {
 	return f.fapi.GetAccList(ctx, category,
 		&futuapi.OptionalBool{Value: generalAcc})
 }
@@ -139,40 +138,25 @@ func (f *FTApi) GetSecGroup(ctx context.Context, groupType qotgetusersecuritygro
 func (f *FTApi) GetGroupSec(ctx context.Context, group string) ([]*qotcommon.SecurityStaticInfo, error) {
 	return f.fapi.GetUserSecurity(ctx, group)
 }
-func (f *FTApi) GetHistoryKline(ctx context.Context, market int32, code string,
-	begin string, end string, klType qotcommon.KLType, rehabType qotcommon.RehabType,
-	extTime bool) (*qotrequesthistorykl.S2C, error) {
-	sec := &qotcommon.Security{
-		Market: proto.Int32(market),
-		Code:   proto.String(code),
-	}
+func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, begin string, end string, klType qotcommon.KLType, rehabType qotcommon.RehabType, extTime bool) (*qotrequesthistorykl.S2C, error) {
 	//sub first
 	if err := f.fapi.Subscribe(ctx,
 		[]*qotcommon.Security{sec},
-		nil,
-		false,
-		false,
-		false,
-		false); err != nil {
+		nil, false, false, false, false); err != nil {
 		return nil, err
 	}
 	//final unsubscribe
 	defer func() {
-		f.fapi.Unsubscribe(ctx,
-			[]*qotcommon.Security{sec},
+		f.fapi.Unsubscribe(ctx, []*qotcommon.Security{sec},
 			[]qotcommon.SubType{qotcommon.SubType(klType)})
 	}()
 	return f.fapi.RequestHistoryKLine(ctx,
-		sec,
-		begin,
-		end,
-		klType, rehabType,
+		sec, begin, end, klType, rehabType,
 		&futuapi.OptionalInt32{Value: math.MaxInt32},
 		qotcommon.KLFields_KLFields_None, nil,
 		&futuapi.OptionalBool{Value: extTime},
 	)
 }
-
 func (f *FTApi) GetMarketState(ctx context.Context, codes ...string) ([]*qotgetmarketstate.MarketInfo, error) {
 	secs := make([]*qotcommon.Security, 0, len(codes))
 	for _, code := range codes {
