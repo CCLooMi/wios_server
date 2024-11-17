@@ -139,11 +139,12 @@ func (f *FTApi) GetSecGroup(ctx context.Context, groupType qotgetusersecuritygro
 func (f *FTApi) GetGroupSec(ctx context.Context, group string) ([]*qotcommon.SecurityStaticInfo, error) {
 	return f.fapi.GetUserSecurity(ctx, group)
 }
-func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, begin string, end string, klType qotcommon.KLType, rehabType qotcommon.RehabType, extTime bool) (*qotrequesthistorykl.S2C, error) {
+func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, klType qotcommon.KLType, end string) (*qotrequesthistorykl.S2C, error) {
 	//sub first
 	if err := f.fapi.Subscribe(ctx,
 		[]*qotcommon.Security{sec},
-		nil, false, false, false, false); err != nil {
+		[]qotcommon.SubType{qotcommon.SubType(klType)},
+		false, false, false, false); err != nil {
 		return nil, err
 	}
 	//final unsubscribe
@@ -151,11 +152,13 @@ func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, be
 		f.fapi.Unsubscribe(ctx, []*qotcommon.Security{sec},
 			[]qotcommon.SubType{qotcommon.SubType(klType)})
 	}()
+	var begin = time.Now().Format("2006-01-02")
 	return f.fapi.RequestHistoryKLine(ctx,
-		sec, begin, end, klType, rehabType,
+		sec, begin, end, klType,
+		qotcommon.RehabType_RehabType_Forward,
 		&futuapi.OptionalInt32{Value: math.MaxInt32},
 		qotcommon.KLFields_KLFields_None, nil,
-		&futuapi.OptionalBool{Value: extTime},
+		&futuapi.OptionalBool{Value: false},
 	)
 }
 func (f *FTApi) GetMarketState(ctx context.Context, codes ...string) ([]*qotgetmarketstate.MarketInfo, error) {
