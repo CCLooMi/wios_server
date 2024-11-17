@@ -139,7 +139,7 @@ func (f *FTApi) GetSecGroup(ctx context.Context, groupType qotgetusersecuritygro
 func (f *FTApi) GetGroupSec(ctx context.Context, group string) ([]*qotcommon.SecurityStaticInfo, error) {
 	return f.fapi.GetUserSecurity(ctx, group)
 }
-func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, klType qotcommon.KLType, end string) (*qotrequesthistorykl.S2C, error) {
+func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, klType qotcommon.KLType, end string, nextKey []byte) (*qotrequesthistorykl.S2C, error) {
 	//sub first
 	if err := f.fapi.Subscribe(ctx,
 		[]*qotcommon.Security{sec},
@@ -157,7 +157,7 @@ func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, kl
 		sec, begin, end, klType,
 		qotcommon.RehabType_RehabType_Forward,
 		&futuapi.OptionalInt32{Value: math.MaxInt32},
-		qotcommon.KLFields_KLFields_None, nil,
+		qotcommon.KLFields_KLFields_None, nextKey,
 		&futuapi.OptionalBool{Value: false},
 	)
 }
