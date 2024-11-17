@@ -50,8 +50,7 @@ func (ctrl *ApiController) runUnsafe(unsafe string, title *string, c *gin.Contex
 		return
 	}
 	var vm = js.NewVm(title, userInfo.User)
-	defer vm.Cleanup()
-	vm.Set("ctx", c)
+	//vm.Set("ctx", c)
 	vm.Set("reqBody", reqBody)
 	vm.Set("userInfo", userInfo)
 	vm.Set("args", args)

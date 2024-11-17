@@ -2,6 +2,7 @@ package js
 
 import (
 	futuapi "github.com/CCLooMi/go-futu-api"
+	"github.com/futuopen/ftapi4go/pb/common"
 	"github.com/futuopen/ftapi4go/pb/getglobalstate"
 	"github.com/futuopen/ftapi4go/pb/qotcommon"
 	"github.com/futuopen/ftapi4go/pb/qotgetmarketstate"
@@ -271,6 +272,70 @@ func (f *FTApi) PlaceMktSellOrder(ctx context.Context, acc *trdcommon.TrdAcc, se
 		&futuapi.OptionalDouble{Value: 0},
 	)
 }
+func (f *FTApi) SysNotify(ctx context.Context, callback func(interface{})) error {
+	ch, err := f.fapi.SysNotify(ctx)
+	if err != nil {
+		return err
+	}
+	selectChan(ctx, ch, callback)
+	return nil
+}
+func (f *FTApi) UpdateKL(ctx context.Context, callback func(interface{})) error {
+	ch, err := f.fapi.UpdateKL(ctx)
+	if err != nil {
+		return err
+	}
+	selectChan(ctx, ch, callback)
+	return nil
+}
+func (f *FTApi) UpdateDeal(ctx context.Context, callback func(interface{})) error {
+	ch, err := f.fapi.UpdateDeal(ctx)
+	if err != nil {
+		return err
+	}
+	selectChan(ctx, ch, callback)
+	return nil
+}
+func (f *FTApi) UpdateRT(ctx context.Context, callback func(interface{})) error {
+	ch, err := f.fapi.UpdateRT(ctx)
+	if err != nil {
+		return err
+	}
+	selectChan(ctx, ch, callback)
+	return nil
+}
+func (f *FTApi) UpdateBasicQot(ctx context.Context, callback func(interface{})) error {
+	ch, err := f.fapi.UpdateBasicQot(ctx)
+	if err != nil {
+		return err
+	}
+	selectChan(ctx, ch, callback)
+	return nil
+}
+func (f *FTApi) UpdateOrder(ctx context.Context, callback func(interface{})) error {
+	ch, err := f.fapi.UpdateOrder(ctx)
+	if err != nil {
+		return err
+	}
+	selectChan(ctx, ch, callback)
+	return nil
+}
+func (f *FTApi) UpdatePriceReminder(ctx context.Context, callback func(interface{})) error {
+	ch, err := f.fapi.UpdatePriceReminder(ctx)
+	if err != nil {
+		return err
+	}
+	selectChan(ctx, ch, callback)
+	return nil
+}
+func (f *FTApi) UpdateTicker(ctx context.Context, callback func(interface{})) error {
+	ch, err := f.fapi.UpdateTicker(ctx)
+	if err != nil {
+		return err
+	}
+	selectChan(ctx, ch, callback)
+	return nil
+}
 func (f *FTApi) TrdMarketName(i int32) string {
 	return trdcommon.TrdMarket_name[i]
 }
@@ -358,8 +423,26 @@ func (f *FTApi) CltRiskStatusName(i int32) string {
 func (f *FTApi) DTStatusName(i int32) string {
 	return trdcommon.DTStatus_name[i]
 }
+func (f *FTApi) MktStateName(i int32) string {
+	return qotcommon.QotMarketState_name[i]
+}
+func (f *FTApi) PriceReminderTypeName(i int32) string {
+	return qotcommon.PriceReminderType_name[i]
+}
+func (f *FTApi) ProgramStatusName(i int32) string {
+	return common.ProgramStatusType_name[i]
+}
 func (f *FTApi) ModifyOrderOpName(i int32) string {
 	return trdcommon.ModifyOrderOp_name[i]
+}
+func (f *FTApi) ExchTypeName(i int32) string {
+	return qotcommon.ExchType_name[i]
+}
+func (f *FTApi) SecTypeName(i int32) string {
+	return qotcommon.SecurityType_name[i]
+}
+func (f *FTApi) SecMarketName(i int32) string {
+	return qotcommon.QotMarket_name[i]
 }
 func newFutuApi(config *conf.Config) *futuapi.FutuAPI {
 	api := futuapi.NewFutuAPI()

@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 	"wios_server/conf"
@@ -100,6 +101,8 @@ func doRegExports(ut *utils.Utils, config *conf.Config, db *sql.DB) {
 	RegExport("sql", mysqlM)
 	RegExport("exp", expM)
 	RegExport("template", templateM)
+	RegExport("newChan", newChan)
+	RegExport("selectChan", selectChan)
 	RegExport("sleep", func(call otto.FunctionCall) otto.Value {
 		duration, _ := call.Argument(0).ToInteger()
 		time.Sleep(time.Duration(duration) * time.Millisecond)
@@ -304,6 +307,32 @@ func fetch(url string, o ...interface{}) (map[string]interface{}, error) {
 			return resp.Cookies()
 		},
 	}, nil
+}
+func selectChan(ctx context.Context, ch interface{}, callback func(interface{})) {
+	chVal := reflect.ValueOf(ch)
+	if chVal.Kind() != reflect.Chan {
+		log.Printf("expect a chan type, got %T", ch)
+		return
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			if chVal.Len() > 0 {
+				value, ok := chVal.Recv()
+				if !ok {
+					return
+				}
+				callback(value.Interface())
+				continue
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+}
+func newChan() chan interface{} {
+	return make(chan interface{})
 }
 
 var Module = fx.Options(
