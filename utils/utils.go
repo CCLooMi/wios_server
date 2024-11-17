@@ -45,10 +45,11 @@ func (u *Utils) SaveObjDataToCache(key string, obj any, expire time.Duration) er
 	s.Id = &key
 	exp := int64(expire.Milliseconds())
 	s.Expires = &exp
-	r := mysql.INSERT_INTO(s).
+	var im = mysql.INSERT_INTO(s).
 		ON_DUPLICATE_KEY_UPDATE().
-		SET("data = ?", d).
-		Execute(u.Db).Update()
+		SET("data = ?", d)
+	im.LOGSQL(false)
+	r := im.Execute(u.Db).Update()
 	_, error := r.RowsAffected()
 	return error
 }
@@ -59,20 +60,22 @@ func (u *Utils) SaveKVToCache(key string, value string, expire time.Duration) er
 	s.Id = &key
 	exp := int64(expire.Milliseconds())
 	s.Expires = &exp
-	r := mysql.INSERT_INTO(s).
+	var im = mysql.INSERT_INTO(s).
 		ON_DUPLICATE_KEY_UPDATE().
-		SET("data = ?", value).
-		Execute(u.Db).Update()
+		SET("data = ?", value)
+	im.LOGSQL(false)
+	r := im.Execute(u.Db).Update()
 	_, err := r.RowsAffected()
 	return err
 }
 func (u *Utils) GetValueFromCache(key string) (string, error) {
 	var data string
 	var err error
-	mysql.SELECT("data").
+	var sm = mysql.SELECT("data").
 		FROM(&entity.Session{}, "s").
-		WHERE("s.id = ?", key).
-		Execute(u.Db).
+		WHERE("s.id = ?", key)
+	sm.LOGSQL(false)
+	sm.Execute(u.Db).
 		ExtractorResultSet(func(rs *sql.Rows) interface{} {
 			for rs.Next() {
 				err = rs.Scan(&data)
@@ -88,10 +91,11 @@ func (u *Utils) GetValueFromCache(key string) (string, error) {
 func (u *Utils) GetObjDataFromCache(key string, out interface{}) error {
 	var data string
 	var err error
-	mysql.SELECT("data").
+	var sm = mysql.SELECT("data").
 		FROM(&entity.Session{}, "s").
-		WHERE("s.id = ?", key).
-		Execute(u.Db).
+		WHERE("s.id = ?", key)
+	sm.LOGSQL(false)
+	sm.Execute(u.Db).
 		ExtractorResultSet(func(rs *sql.Rows) interface{} {
 			for rs.Next() {
 				err := rs.Scan(&data)
@@ -117,11 +121,11 @@ func (u *Utils) OpenExcelByFid(fid string) (*excelize.File, error) {
 	return nil, err
 }
 func (u *Utils) DelFromCache(key string) {
-	mysql.DELETE().
+	var dm = mysql.DELETE().
 		FROM(&entity.Session{}).
-		WHERE("id = ?", key).
-		Execute(u.Db).
-		Update()
+		WHERE("id = ?", key)
+	dm.LOGSQL(false)
+	dm.Execute(u.Db).Update()
 }
 func (u *Utils) DelFileByFid(fid string) bool {
 	bid, err := hex.DecodeString(fid)
@@ -164,11 +168,11 @@ func (u *Utils) BackupTableDataToCSV(tableName string, dir string, fileName stri
 	page := 0
 	pgSize := 1000
 	for {
-		data := mysql.SELECT("*").
+		sm := mysql.SELECT("*").
 			FROM(tableName, "a").
-			LIMIT(page*(pgSize+1), pgSize).
-			Execute(u.Db).
-			GetResultAsCSVData()
+			LIMIT(page*(pgSize+1), pgSize)
+		sm.LOGSQL(false)
+		data := sm.Execute(u.Db).GetResultAsCSVData()
 		if len(data) > 1 {
 			err := writer.WriteAll(data)
 			if err != nil {
