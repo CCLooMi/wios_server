@@ -1,6 +1,7 @@
 package js
 
 import (
+	"fmt"
 	futuapi "github.com/CCLooMi/go-futu-api"
 	"github.com/futuopen/ftapi4go/pb/common"
 	"github.com/futuopen/ftapi4go/pb/getglobalstate"
@@ -9,6 +10,7 @@ import (
 	"github.com/futuopen/ftapi4go/pb/qotgetsubinfo"
 	"github.com/futuopen/ftapi4go/pb/qotgetusersecuritygroup"
 	"github.com/futuopen/ftapi4go/pb/qotrequesthistorykl"
+	"github.com/futuopen/ftapi4go/pb/qotsetpricereminder"
 	"github.com/futuopen/ftapi4go/pb/trdcommon"
 	"github.com/futuopen/ftapi4go/pb/trdplaceorder"
 	"github.com/gogo/protobuf/proto"
@@ -16,17 +18,20 @@ import (
 	"golang.org/x/net/context"
 	"log"
 	"math"
+	"sync"
 	"time"
 	"wios_server/conf"
 )
 
 type FTApi struct {
-	fapi *futuapi.FutuAPI
-	conf *conf.FutuApiConfig
+	fapi      *futuapi.FutuAPI
+	conf      *conf.FutuApiConfig
+	subStates map[string]uint32 // registered sub states
+	mu        sync.Mutex        // protect subStates
 }
 
 func NewFTApi(fapi *futuapi.FutuAPI, conf *conf.FutuApiConfig) *FTApi {
-	return &FTApi{fapi, conf}
+	return &FTApi{fapi, conf, make(map[string]uint32), sync.Mutex{}}
 }
 func (f *FTApi) ConnID() uint64 {
 	return f.fapi.ConnID()
@@ -139,20 +144,90 @@ func (f *FTApi) GetSecGroup(ctx context.Context, groupType qotgetusersecuritygro
 func (f *FTApi) GetGroupSec(ctx context.Context, group string) ([]*qotcommon.SecurityStaticInfo, error) {
 	return f.fapi.GetUserSecurity(ctx, group)
 }
-func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, klType qotcommon.KLType, end string, nextKey []byte) (*qotrequesthistorykl.S2C, error) {
-	//sub first
-	if err := f.fapi.Subscribe(ctx,
-		[]*qotcommon.Security{sec},
-		[]qotcommon.SubType{qotcommon.SubType(klType)},
-		false, false, false, false); err != nil {
+func (f *FTApi) GetSec(ctx context.Context, code string) (*qotcommon.SecurityStaticBasic, error) {
+	ss, err := f.GetGroupSec(ctx, "全部")
+	if err != nil {
 		return nil, err
 	}
-	//final unsubscribe
-	defer func() {
-		f.fapi.Unsubscribe(ctx, []*qotcommon.Security{sec},
-			[]qotcommon.SubType{qotcommon.SubType(klType)})
-	}()
-	var begin = time.Now().Format("2006-01-02")
+	for _, v := range ss {
+		if *v.Basic.Name == code || *v.Basic.Security.Code == code {
+			return v.Basic, nil
+		}
+	}
+	return nil, nil
+}
+func (f *FTApi) SubSec(ctx context.Context, sec *qotcommon.Security, subType qotcommon.SubType) (func(), error) {
+	key := fmt.Sprintf("%s#%d", *sec.Code, subType)
+	if f.subStates[key] == 0 {
+		err := f.fapi.
+			Subscribe(ctx, []*qotcommon.Security{sec}, []qotcommon.SubType{subType},
+				true, true, false, false)
+		if err != nil {
+			return nil, err
+		}
+		f.mu.Lock()
+		f.subStates[key]++
+		f.mu.Unlock()
+	}
+	return func() {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		f.subStates[key]--
+		if f.subStates[key] == 0 {
+			t, ca := context.WithTimeout(context.Background(), 30*time.Second)
+			defer ca()
+			err := f.fapi.Unsubscribe(t,
+				[]*qotcommon.Security{sec},
+				[]qotcommon.SubType{subType})
+			if err != nil {
+				fmt.Printf("Unsubscribe failed: %v\n", err)
+				f.subStates[key]++
+				return
+			}
+			delete(f.subStates, key)
+		}
+	}, nil
+}
+func klTypeToSubType(klType qotcommon.KLType) qotcommon.SubType {
+	switch klType {
+	case qotcommon.KLType_KLType_1Min:
+		return qotcommon.SubType_SubType_KL_1Min
+	case qotcommon.KLType_KLType_Day:
+		return qotcommon.SubType_SubType_KL_Day
+	case qotcommon.KLType_KLType_Week:
+		return qotcommon.SubType_SubType_KL_Week
+	case qotcommon.KLType_KLType_Month:
+		return qotcommon.SubType_SubType_KL_Month
+	case qotcommon.KLType_KLType_Year:
+		return qotcommon.SubType_SubType_KL_Year
+	case qotcommon.KLType_KLType_Quarter:
+		return qotcommon.SubType_SubType_KL_Qurater
+	case qotcommon.KLType_KLType_5Min:
+		return qotcommon.SubType_SubType_KL_5Min
+	case qotcommon.KLType_KLType_15Min:
+		return qotcommon.SubType_SubType_KL_15Min
+	case qotcommon.KLType_KLType_30Min:
+		return qotcommon.SubType_SubType_KL_30Min
+	case qotcommon.KLType_KLType_60Min:
+		return qotcommon.SubType_SubType_KL_60Min
+	case qotcommon.KLType_KLType_3Min:
+		return qotcommon.SubType_SubType_KL_3Min
+	default:
+		return qotcommon.SubType_SubType_None
+	}
+}
+func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, klType qotcommon.KLType, begin string, nextKey []byte) (*qotrequesthistorykl.S2C, error) {
+	//sub first
+	subType := klTypeToSubType(klType)
+	if subType == qotcommon.SubType_SubType_None {
+		return nil, fmt.Errorf("invalid klType: %d", klType)
+	}
+	unsub, err := f.SubSec(ctx, sec, subType)
+	if err != nil {
+		return nil, err
+	}
+	defer unsub()
+	var end = time.Now().Format("2006-01-02")
 	return f.fapi.RequestHistoryKLine(ctx,
 		sec, begin, end, klType,
 		qotcommon.RehabType_RehabType_Forward,
@@ -275,6 +350,32 @@ func (f *FTApi) PlaceMktSellOrder(ctx context.Context, acc *trdcommon.TrdAcc, se
 		&futuapi.OptionalDouble{Value: 0},
 	)
 }
+func (f *FTApi) AddPriceReminder(ctx context.Context, sec *qotcommon.Security, price float64, note string) (int64, error) {
+	return f.fapi.SetPriceReminder(ctx, sec,
+		qotsetpricereminder.SetPriceReminderOp_SetPriceReminderOp_Add,
+		0,
+		qotcommon.PriceReminderType_PriceReminderType_PriceUp,
+		qotcommon.PriceReminderFreq_PriceReminderFreq_OnceADay,
+		&futuapi.OptionalDouble{Value: price}, note)
+}
+func (f *FTApi) SetPriceReminder(ctx context.Context, sec *qotcommon.Security, price float64, note string, key int64) (int64, error) {
+	return f.fapi.SetPriceReminder(ctx, sec,
+		qotsetpricereminder.SetPriceReminderOp_SetPriceReminderOp_Modify,
+		key,
+		qotcommon.PriceReminderType_PriceReminderType_PriceUp,
+		qotcommon.PriceReminderFreq_PriceReminderFreq_OnceADay,
+		&futuapi.OptionalDouble{Value: price}, note)
+}
+func (f *FTApi) DelPriceReminder(ctx context.Context, sec *qotcommon.Security, key int64) (int64, error) {
+	return f.fapi.SetPriceReminder(ctx, sec,
+		qotsetpricereminder.SetPriceReminderOp_SetPriceReminderOp_Del,
+		key, 0, 0, nil, "")
+}
+func (f *FTApi) DelAllPriceReminder(ctx context.Context, sec *qotcommon.Security) (int64, error) {
+	return f.fapi.SetPriceReminder(ctx, sec,
+		qotsetpricereminder.SetPriceReminderOp_SetPriceReminderOp_DelAll,
+		0, 0, 0, nil, "")
+}
 func (f *FTApi) SysNotify(ctx context.Context, callback func(interface{})) error {
 	ch, err := f.fapi.SysNotify(ctx)
 	if err != nil {
@@ -331,7 +432,12 @@ func (f *FTApi) UpdatePriceReminder(ctx context.Context, callback func(interface
 	selectChan(ctx, ch, callback)
 	return nil
 }
-func (f *FTApi) UpdateTicker(ctx context.Context, callback func(interface{})) error {
+func (f *FTApi) UpdateTicker(ctx context.Context, sec *qotcommon.Security, callback func(interface{})) error {
+	unsub, err := f.SubSec(ctx, sec, qotcommon.SubType_SubType_Ticker)
+	if err != nil {
+		return err
+	}
+	defer unsub()
 	ch, err := f.fapi.UpdateTicker(ctx)
 	if err != nil {
 		return err

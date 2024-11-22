@@ -120,7 +120,7 @@ func (vm *Vm) Execute(script string) (otto.Value, error) {
 				log.Printf("JSVM[%s] Stopped after: %s", vm.ID, duration.String())
 				return
 			}
-			panic(caught)
+			log.Printf("JSVM[%s] Stopped after: %s,caught: %v", vm.ID, duration.String(), caught)
 		}
 	}()
 	return vm.otto.Run(script)

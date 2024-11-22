@@ -319,18 +319,16 @@ func selectChan(ctx context.Context, ch interface{}, callback func(interface{}))
 		case <-ctx.Done():
 			return
 		default:
-			if chVal.Len() > 0 {
-				value, ok := chVal.Recv()
-				if !ok {
-					return
-				}
-				callback(value.Interface())
+			val, ok := chVal.TryRecv()
+			if !ok {
+				time.Sleep(500 * time.Millisecond) // 如果没有值，稍作休眠
 				continue
 			}
-			time.Sleep(500 * time.Millisecond)
+			callback(val.Interface())
 		}
 	}
 }
+
 func newChan() chan interface{} {
 	return make(chan interface{})
 }
