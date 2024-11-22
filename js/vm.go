@@ -87,6 +87,9 @@ func (vm *Vm) Set(key string, value interface{}) error {
 	return vm.otto.Set(key, value)
 }
 func (vm *Vm) Finally(f func()) {
+	if f == nil {
+		return
+	}
 	vm.cleanupFuncs = append(vm.cleanupFuncs, safeFunc(f))
 }
 func (vm *Vm) cleanup() {
