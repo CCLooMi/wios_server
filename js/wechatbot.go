@@ -10,6 +10,7 @@ import (
 	"math"
 	"regexp"
 	"sync"
+	"time"
 	"wios_server/conf"
 )
 
@@ -27,7 +28,47 @@ func NewWebot(bot *openwechat.Bot) *Webot {
 	bot.MessageHandler = wb.handleMessage
 	return wb
 }
-
+func (w *Webot) Login(uname *string, ts int64) (string, error) {
+	timeout := time.Duration(ts) * time.Second
+	urlChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+	w.bot.UUIDCallback = func(uuid string) {
+		select {
+		case urlChan <- "https://login.weixin.qq.com/qrcode/" + uuid:
+		default: // prevent deadlock
+		}
+	}
+	go func() {
+		defer close(urlChan)
+		defer close(errChan)
+		u, err := w.GetCurrentUser()
+		if err != nil {
+			if loginErr := w.bot.Login(); loginErr != nil {
+				errChan <- loginErr
+			}
+			return
+		}
+		if uname == nil || *uname == "" || u.NickName == *uname {
+			urlChan <- ""
+			return
+		}
+		if logoutErr := w.bot.Logout(); logoutErr != nil {
+			errChan <- logoutErr
+			return
+		}
+		if loginErr := w.bot.Login(); loginErr != nil {
+			errChan <- loginErr
+		}
+	}()
+	select {
+	case url := <-urlChan:
+		return url, nil
+	case err := <-errChan:
+		return "", err
+	case <-time.After(timeout):
+		return "", fmt.Errorf("timeout waiting for login URL")
+	}
+}
 func (w *Webot) GetCurrentUser() (*openwechat.Self, error) {
 	return w.bot.GetCurrentUser()
 }

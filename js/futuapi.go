@@ -174,7 +174,7 @@ func (f *FTApi) SubSec(ctx context.Context, sec *qotcommon.Security, subType qot
 		defer f.mu.Unlock()
 		f.subStates[key]--
 		if f.subStates[key] == 0 {
-			t, ca := context.WithTimeout(context.Background(), 30*time.Second)
+			t, ca := context.WithTimeout(ctx, 30*time.Second)
 			defer ca()
 			err := f.fapi.Unsubscribe(t,
 				[]*qotcommon.Security{sec},

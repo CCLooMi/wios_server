@@ -103,7 +103,6 @@ func (vm *Vm) cleanup() {
 			f()
 		}
 		vmManager.Delete(vm.ID)
-		log.Printf("VM[%s] resources cleaned up.", vm.ID)
 	})
 }
 func (vm *Vm) Exit() string {
@@ -124,6 +123,7 @@ func (vm *Vm) Execute(script string) (otto.Value, error) {
 				return
 			}
 			log.Printf("JSVM[%s] Stopped after: %s,caught: %v", vm.ID, duration.String(), caught)
+			return
 		}
 	}()
 	return vm.otto.Run(script)
