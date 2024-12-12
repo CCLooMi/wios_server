@@ -63,6 +63,7 @@ type Vm struct {
 	otto         *otto.Otto
 	cleanupOnce  sync.Once
 	cleanupFuncs []func()
+	mu           sync.Mutex
 }
 
 func NewVm(title *string, u *entity.User) *Vm {
@@ -90,6 +91,8 @@ func (vm *Vm) Finally(f func()) {
 	if f == nil {
 		return
 	}
+	vm.mu.Lock()
+	defer vm.mu.Unlock()
 	vm.cleanupFuncs = append(vm.cleanupFuncs, safeFunc(f))
 }
 func (vm *Vm) cleanup() {

@@ -1,23 +1,16 @@
 package conf
 
 import (
-	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
-	"github.com/cockroachdb/pebble"
-	"github.com/dustin/go-humanize"
-	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	pebbleds "github.com/ipfs/go-ds-pebble"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
 	"os"
 	"wios_server/entity"
@@ -184,157 +177,6 @@ func saveConfigToFile(config *Config, log *zap.Logger) {
 }
 func loadConfig() (*Config, error) {
 	return LoadConfig(cfgName)
-}
-func initDB(lc fx.Lifecycle, config *Config, log *zap.Logger) (*sql.DB, error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port, config.DB.Name)
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return nil, err
-	}
-	lc.Append(fx.Hook{
-		OnStop: func(ctx context.Context) error {
-			log.Info("closing database connection")
-			return db.Close()
-		},
-	})
-	return db, nil
-}
-func initPebble(lc fx.Lifecycle, config *Config, log *zap.Logger) (*pebbleds.Datastore, error) {
-	var c = config.DatastoreConf
-	if c.Path == "" {
-		c.Path = "datastore"
-	}
-	var compression pebble.Compression
-	switch cm := c.Compression; cm {
-	case "zstd", "":
-		compression = pebble.ZstdCompression
-	case "snappy":
-		compression = pebble.SnappyCompression
-	case "default":
-		compression = pebble.DefaultCompression
-	case "none":
-		compression = pebble.NoCompression
-	}
-	cacheSize := parseBytesI64(c.CacheSize, 8*1024*1024)
-	bytesPerSync := parseBytesI32(c.BytesPerSync, 512*1024)
-	memTableSize := parseBytes(c.MemTableSize, 64*1024*1024)
-	if c.MaxOpenFiles <= 0 {
-		c.MaxOpenFiles = 1000
-	}
-	ds, err := pebbleds.NewDatastore(c.Path, &pebble.Options{
-		BytesPerSync: bytesPerSync,
-		Cache:        pebble.NewCache(cacheSize),
-		MemTableSize: memTableSize,
-		MaxOpenFiles: c.MaxOpenFiles,
-		Levels: []pebble.LevelOptions{
-			{Compression: compression},
-		},
-	})
-	lc.Append(fx.Hook{
-		OnStop: func(ctx context.Context) error {
-			go func() {
-				log.Info("closing datastore")
-				if err := ds.Close(); err != nil {
-					log.Sugar().Errorf("failed to close datastore: %w", err)
-				}
-			}()
-			return nil
-		},
-	})
-	return ds, err
-}
-
-// zapWriter is a custom io.Writer that writes to a zap logger
-type zapWriter struct {
-	logger *zap.Logger
-	lv     zapcore.Level
-}
-
-// Write implements the io.Writer interface for zapWriter
-func (w zapWriter) Write(p []byte) (n int, err error) {
-	pL := len(p)
-	if w.lv == zap.DebugLevel {
-		w.logger.Debug(string(p))
-		return pL, nil
-	}
-	if w.lv == zap.InfoLevel {
-		w.logger.Info(string(p))
-		return pL, nil
-	}
-	if w.lv == zap.WarnLevel {
-		w.logger.Warn(string(p))
-		return pL, nil
-	}
-	if w.lv == zap.ErrorLevel {
-		w.logger.Error(string(p))
-		return pL, nil
-	}
-	return pL, nil
-}
-func setLog(config *Config) *zap.Logger {
-	zapCfg := zap.Config{
-		Level:       zap.NewAtomicLevelAt(zap.DebugLevel),
-		Development: false,
-		Encoding:    "json",
-		EncoderConfig: zapcore.EncoderConfig{
-			TimeKey:        "ts",
-			LevelKey:       "level",
-			NameKey:        "logger",
-			CallerKey:      "caller",
-			MessageKey:     "msg",
-			StacktraceKey:  "stacktrace",
-			LineEnding:     zapcore.DefaultLineEnding,
-			EncodeLevel:    zapcore.LowercaseLevelEncoder,
-			EncodeTime:     zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05"),
-			EncodeDuration: zapcore.StringDurationEncoder,
-			EncodeCaller:   zapcore.ShortCallerEncoder,
-		},
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
-	}
-	logger, err := zapCfg.Build()
-	if err != nil {
-		panic(err)
-	}
-	defer logger.Sync() // Flushes buffer, if any
-	// Replace the global logger
-	// Replace zap's global logger
-	zap.ReplaceGlobals(logger)
-	// Redirect stdlib log output to our logger
-	zap.RedirectStdLog(logger)
-	// Set Gin to use zap's logger
-	gin.DefaultWriter = zapWriter{logger: logger, lv: zap.DebugLevel}
-	gin.DefaultErrorWriter = zapWriter{logger: logger, lv: zap.ErrorLevel}
-	// Set log level from configuration
-	logLevel, err := zapcore.ParseLevel(config.LogLevel)
-	if err != nil {
-		logLevel = zapcore.DebugLevel
-	}
-	zapCfg.Level.SetLevel(logLevel)
-	return logger
-}
-
-func parseBytes(s string, df uint64) uint64 {
-	v, err := humanize.ParseBytes(s)
-	if err != nil {
-		return df
-	}
-	return v
-}
-func parseBytesI64(s string, df int64) int64 {
-	v, err := humanize.ParseBytes(s)
-	if err != nil {
-		return df
-	}
-	return int64(v)
-}
-func parseBytesI32(s string, df int) int {
-	v, err := humanize.ParseBytes(s)
-	if err != nil {
-		return df
-	}
-	return int(v)
 }
 
 var Module = fx.Options(
