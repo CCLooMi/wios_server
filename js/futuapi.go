@@ -18,20 +18,17 @@ import (
 	"golang.org/x/net/context"
 	"log"
 	"math"
-	"sync"
 	"time"
 	"wios_server/conf"
 )
 
 type FTApi struct {
-	fapi      *futuapi.FutuAPI
-	conf      *conf.FutuApiConfig
-	subStates map[string]uint32 // registered sub states
-	mu        sync.Mutex        // protect subStates
+	fapi *futuapi.FutuAPI
+	conf *conf.FutuApiConfig
 }
 
 func NewFTApi(fapi *futuapi.FutuAPI, conf *conf.FutuApiConfig) *FTApi {
-	return &FTApi{fapi, conf, make(map[string]uint32), sync.Mutex{}}
+	return &FTApi{fapi, conf}
 }
 func (f *FTApi) ConnID() uint64 {
 	return f.fapi.ConnID()
@@ -157,34 +154,21 @@ func (f *FTApi) GetSec(ctx context.Context, code string) (*qotcommon.SecuritySta
 	return nil, nil
 }
 func (f *FTApi) SubSec(ctx context.Context, sec *qotcommon.Security, subType qotcommon.SubType) (func(), error) {
-	key := fmt.Sprintf("%s#%d", *sec.Code, subType)
-	if f.subStates[key] == 0 {
-		err := f.fapi.
-			Subscribe(ctx, []*qotcommon.Security{sec}, []qotcommon.SubType{subType},
-				true, true, false, false)
-		if err != nil {
-			return nil, err
-		}
-		f.mu.Lock()
-		f.subStates[key]++
-		f.mu.Unlock()
+	err := f.fapi.
+		Subscribe(ctx, []*qotcommon.Security{sec}, []qotcommon.SubType{subType},
+			true, true, false, false)
+	if err != nil {
+		return nil, err
 	}
 	return func() {
-		f.mu.Lock()
-		defer f.mu.Unlock()
-		f.subStates[key]--
-		if f.subStates[key] == 0 {
-			t, ca := context.WithTimeout(ctx, 30*time.Second)
-			defer ca()
-			err := f.fapi.Unsubscribe(t,
-				[]*qotcommon.Security{sec},
-				[]qotcommon.SubType{subType})
-			if err != nil {
-				fmt.Printf("Unsubscribe failed: %v\n", err)
-				f.subStates[key]++
-				return
-			}
-			delete(f.subStates, key)
+		t, ca := context.WithTimeout(ctx, 30*time.Second)
+		defer ca()
+		err := f.fapi.Unsubscribe(t,
+			[]*qotcommon.Security{sec},
+			[]qotcommon.SubType{subType})
+		if err != nil {
+			fmt.Printf("Unsubscribe failed: %v\n", err)
+			return
 		}
 	}, nil
 }
@@ -222,11 +206,10 @@ func (f *FTApi) GetHistoryKline(ctx context.Context, sec *qotcommon.Security, kl
 	if subType == qotcommon.SubType_SubType_None {
 		return nil, fmt.Errorf("invalid klType: %d", klType)
 	}
-	unsub, err := f.SubSec(ctx, sec, subType)
+	_, err := f.SubSec(ctx, sec, subType)
 	if err != nil {
 		return nil, err
 	}
-	defer unsub()
 	var end = time.Now().Format("2006-01-02")
 	return f.fapi.RequestHistoryKLine(ctx,
 		sec, begin, end, klType,
