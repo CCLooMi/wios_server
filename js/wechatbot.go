@@ -142,7 +142,14 @@ func (w *Webot) handleMessage(msg *openwechat.Message) {
 	defer w.mu.Unlock()
 	for _, handler := range w.handlers {
 		if handler != nil {
-			handler(msg)
+			func() {
+				defer func() {
+					if err := recover(); err != nil {
+						log.Printf("Handler panic: %v\n", err)
+					}
+				}()
+				handler(msg)
+			}()
 		}
 	}
 }
