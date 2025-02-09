@@ -335,7 +335,7 @@ func newChan() chan interface{} {
 
 var Module = fx.Options(
 	futuApiModule,
-	webotModule,
 	dhtModule,
+	imapModule,
 	fx.Invoke(doRegExports),
 )

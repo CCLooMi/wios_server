@@ -3,6 +3,8 @@ package utils
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
+	"mime"
 	"net/smtp"
 	"os"
 	"path"
@@ -33,6 +35,7 @@ type Message struct {
 	Body        string
 	ContentType string
 	Attachments []Attachment
+	sender      *MailSender
 }
 
 const boundary = "WiOSBoundary"
@@ -68,7 +71,8 @@ func writeHeader(buf *bytes.Buffer, msg *Message) bool {
 	if msg.Bcc != nil && len(msg.Bcc) > 0 {
 		writeKV(buf, "Bcc", strings.Join(msg.Bcc, ";"))
 	}
-	writeKV(buf, "Subject", msg.Subject)
+	encodedSubject := mime.QEncoding.Encode("UTF-8", msg.Subject)
+	writeKV(buf, "Subject", encodedSubject)
 	if msg.Attachments != nil && len(msg.Attachments) > 0 {
 		writeKV(buf, "Content-Type", "multipart/mixed; boundary="+boundary)
 		haseFile = true
@@ -149,4 +153,41 @@ func (s *MailSender) Send(msg Message) error {
 		}
 	}
 	return smtp.SendMail(s.Host+":"+s.Port, auth, msg.From, msg.To, buf.Bytes())
+}
+func (s *MailSender) NewMail() *Message {
+	return &Message{sender: s, ContentType: "text/html; charset=\"UTF-8\""}
+}
+func (m *Message) SetTo(to ...string) *Message {
+	m.To = append(m.To, to...)
+	return m
+}
+func (m *Message) SetCc(cc ...string) *Message {
+	m.Cc = append(m.Cc, cc...)
+	return m
+}
+func (m *Message) SetBcc(bcc ...string) *Message {
+	m.Bcc = append(m.Bcc, bcc...)
+	return m
+}
+func (m *Message) SetSubject(subject string) *Message {
+	m.Subject = subject
+	return m
+}
+func (m *Message) SetBody(body string) *Message {
+	m.Body = body
+	return m
+}
+func (m *Message) SetContentType(contentType string) *Message {
+	m.ContentType = contentType
+	return m
+}
+func (m *Message) SetAttachments(attachments []Attachment) *Message {
+	m.Attachments = attachments
+	return m
+}
+func (m *Message) Send() error {
+	if m.sender == nil {
+		return errors.New("sender is nil")
+	}
+	return m.sender.Send(*m)
 }

@@ -36,7 +36,7 @@ func (dao *MenuService) DeleteMenu(menu *entity.Menu) []sql.Result {
 		WHERE("m.id = ?", menu.Id).
 		OR("m.pid = ?", menu.Id)
 	dm := mysql.DELETE().FROM(entity.RoleMenu{}).
-		WHERE_SUBQUERY("menu_id", mak.INValue, sm)
+		WHERE_SUBQUERY("menu_id", "IN", sm)
 	dm2 := mysql.DELETE().FROM(entity.Menu{}).
 		WHERE("id = ?", menu.Id).
 		OR("pid = ?", menu.Id)

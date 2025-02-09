@@ -11,7 +11,7 @@ import (
 	"wios_server/utils"
 )
 
-var halt = errors.New("Stahp")
+var halt = errors.New("Execution was manually stopped")
 
 type VmManager struct {
 	mu  sync.RWMutex
@@ -109,10 +109,11 @@ func (vm *Vm) cleanup() {
 	})
 }
 func (vm *Vm) Exit() string {
+	//cleanup first防止容器停止后cleanup执行容器内的函数导致容器无法停止
+	vm.cleanup()
 	vm.otto.Interrupt <- func() {
 		panic(halt)
 	}
-	vm.cleanup()
 	return "vm[" + vm.ID + "] exited."
 }
 func (vm *Vm) Execute(script string) (otto.Value, error) {

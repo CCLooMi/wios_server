@@ -1,4 +1,9 @@
 id,desc,script,type,category,status,inserted_at,updated_at,inserted_by,updated_by
+0171c9ae5f3e9e3be71af8d76914ed2e,Finally demo,"self.Finally(function(){
+    msg.Ok(""Finally123"")
+});
+false;
+",,,,2024-11-10T14:12:13+08:00,2024-11-10T14:12:13+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 076839523698cbdc7e0e7ec5abbefe28,获取亚马逊仓库信息,"var url = ""http://www.jiufanglogistics.cn/channel/1/fbackdz"";
 var a = fetch(url);
 var q = ""[id='accordion'] .panel-title>a,[id='accordion'] .panel-body"";
@@ -63,11 +68,12 @@ function getTrData(tr, t) {
 function endsWith(str, suffix) {
     return str.indexOf(suffix, str.length - suffix.length) !== -1;
 }",,script,,2024-06-21T22:04:59+08:00,2024-06-21T23:16:38+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+0c49923c8855f1aa565cecfb28e24615,微信登录,"webot.Login("""",5)",,script,,2025-01-28T08:23:46+08:00,2025-01-28T08:23:46+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 21dd8b2f7d1062d6ab08af557e3e391f,loop,"self.Title=""Loop""
 while(true){
     console.log(""Task running!""+new Date())
     sleep(1000)
-}",,script,,2024-05-12T21:12:25+08:00,2024-05-15T19:17:49+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+}",,script,,2024-05-12T21:12:25+08:00,2024-10-25T19:26:02+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 34e6cb6e8eaa3b25e6e19284db566606,获取DHT路由表Size,dht.RoutingTable().Size(),,script,,2024-07-11T19:52:15+08:00,2024-07-11T19:52:27+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 40abf772c8c670033e6704713272f67d,Template test,"var ts = sysCfg[""code.verify.template""];
 var a = template.Apply(ts,{code:989890,year:2024});
@@ -109,6 +115,201 @@ function getFlagInfo(d,data){
     }
     data[t.Text().trim()]=flags;
 }",,script,,2024-04-10T16:32:26+08:00,2024-04-11T10:53:47+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+5843eda4a3ddf9e2fceb200a675cdce9,获取沪深自选股列表,"var a= futuapi.GetGroupSec(ctx,""沪深"")[0]
+var secs = [];
+for(var i=0;i<a.length;i++){
+    var ai = a[i].basic;
+    secs.push({
+        ""id"":ai.id,
+        ""lotSize"":ai.lotSize,
+        ""secType"":futuapi.SecTypeName(ai.secType),
+        ""code"":ai.security.code,
+        ""market"":futuapi.SecMarketName(ai.security.market),
+        ""name"":ai.name,
+        ""listTime"":ai.listTime,
+        ""delisting"":ai.delisting,
+        ""listTimestamp"":ai.listTimestamp,
+        ""exchType"":futuapi.ExchTypeName(ai.exchType)
+    })
+}
+secs;",,script,,2024-11-16T22:29:35+08:00,2024-11-16T22:29:35+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+5fbe1864e37ffecc6129b935cf5de060,接收微信消息,"var a = webot.GetCurrentUser();
+var u = a[0];
+var fs = u.Friends()[0];
+var gs = u.Groups(true)[0];
+var g = gs.SearchByNickName(1,""牛市🐂🐂🐂🐂"")[0];
+var f = fs.SearchByNickName(1,""君"")[0];
+[u.NickName,u.ID(),u.HeadImgUrl,u.Sex,g,f]
+
+webot.OnMsg(function(msg){
+    console.log(""Receive wechat msg!"");
+    console.log(JSON.stringify({from:msg.FromUserName,MsgId:msg.MsgId,msgType:msg.MsgType,content:msg.Content,createTime:msg.CreateTime,to:msg.ToUserName,self:f.UserName}));
+},self);
+
+self.Title=""接收微信信息""
+while(true){
+    sleep(1000)
+}
+",,script,,2025-01-27T20:41:20+08:00,2025-01-27T21:04:30+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+707009d4caf2287d83d4ec0210314a9d,获取历史K线,"futuapi.Connect(context.Background());
+
+var a0 = args[0]||{};
+var secB = a0.code?futuapi.GetSec(ctx,a0.code)[0]:futuapi.GetGroupSec(ctx,""沪深"")[0][0].basic;
+var sec = secB.security;
+//1:min,2:date,3:week,4:month,5:years
+var type = a0.type?a0.type:2;
+var a = futuapi.GetHistoryKline(ctx,sec,type,secB.listTime,[]);
+var ls = a[0];
+var err = a[1]&&a[1].Error();
+err?[]:ls.klList
+
+",,,,2024-11-17T20:29:19+08:00,2024-12-19T10:56:55+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+758d52c6e0df6bd75a658d1fb0d7fbd3,获取某个助手的所有会话ID,"var aid = ""36b3bc46dd7acdc159708896f9fc6377"";
+function getSids(aid){
+    return sql.SELECT(""DISTINCT a.sessionId"").FROM(""ai_chat_history"",""a"")
+    .WHERE(""a.assistantId=?"",aid)
+    .Execute(db)
+    .GetResultAsList();
+}
+getSids(aid);",,script,,2025-02-09T14:42:13+08:00,2025-02-09T14:42:13+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+7bb05d886ef3ccce32c46803921df1e2,监控股票实时价格,"futuapi.Connect(context.Background());
+var sec = futuapi.GetSec(ctx, ""01810"")[0];
+self.Title=sec.Name;
+var a = futuapi.SubSec(ctx, sec.Security, 5);
+self.Finally(a[0]);
+self.Finally(function () {
+    msg.Ok(""退出监控"")
+});
+futuapi.UpdateRT(ctx, function (data) {
+    console.log(JSON.stringify(data));
+})
+false;",,script,,2024-11-21T22:08:49+08:00,2024-11-22T15:39:18+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+87670f253f0c4e11fb24567b7969b540,通用邮箱Ai助手,"self.Title = aiAssistant.Name;
+var aiCfg = JSON.parse(aiAssistant.Conf);
+var initMsg = { ""role"": ""system"", ""content"": aiAssistant.Prompt };
+var tableName = ""ai_chat_history"";
+var host = ""smtp."" + aiCfg.host;
+var port = aiCfg.smtpPort || ""587"";
+var addr = ""imap."" + aiCfg.host + "":"" + (aiCfg.imapPort || ""993"");
+var username = aiCfg.username+""@""+aiCfg.host;
+var password = aiCfg.password;
+var msender = newMailSender(username, password, host, port, ""."");
+var a = newImapClient(addr, username, password);
+while (true) {
+    if (a[0]) {
+        var client = a[0];
+        self.Finally(function () {
+            client.Logout();
+        });
+        getMail(client);
+        checkAndReply(aid);
+    }
+    sleep(5000);
+}
+function getMail(client) {
+    var ms = fetchMail(""INBOX"", 10, client)[0];
+    if (ms) {
+        var ids = [];
+        var uidMap = {};
+        for (var i = 0; i < ms.length; i++) {
+            ids.push(ms[i].Id);
+            uidMap[ms[i].Id] = ms[i].Uid;
+        }
+        var uids = checkMsgId(ids, uidMap);
+        var ms = fetchMailByUid(""INBOX"", client, uids)[0];
+        if (ms && ms.length) {
+            console.log(""Receive new emails:"" + ms.length);
+            saveEmail(ms);
+        }
+    }
+}
+function saveEmail(ms) {
+    for (var i = 0; i < ms.length; i++) {
+        var mi = ms[i];
+        saveChatHistory(aid, mi.From, mi.Id, mi.Subject, ""user"", mi.Body[""text/plain""]);
+    }
+}
+function saveChatHistory(aid, sid, msgId, subject, role, content) {
+    var rs = sql.INSERT_INTO(tableName, ""id"", ""assistantId"", ""sessionId"", ""msgId"", ""subject"", ""role"", ""content"", ""inserted_at"", ""updated_at"").VALUES(exp.UUID(), aid, sid, msgId, subject, role, content, exp.Now(), exp.Now()).Execute(db).Update();
+    return rs.RowsAffected();
+}
+function checkMsgId(ids, uidMap) {
+    var sm = sql.SELECT(""a.msgId"").FROM(tableName, ""a"")
+        .WHERE_IN(""a.msgId"", ""IN"", ids);
+    sm.LOGSQL(false);
+    var ls = sm.Execute(db).GetResultAsList();
+    var map = {};
+    for (var i = 0; i < ls.length; i++) {
+        map[ls[i]] = true;
+    }
+    var uids = [];
+    for (var i = 0; i < ids.length; i++) {
+        if (map[ids[i]]) {
+            continue;
+        }
+        uids.push(uidMap[ids[i]]);
+    }
+    return uids;
+}
+function getChatHistory(aid, sid) {
+    return sql.SELECT(""a.role"", ""a.content"").FROM(""ai_chat_history"", ""a"")
+        .WHERE(""a.assistantId=?"", aid)
+        .AND(""a.sessionId=?"", sid)
+        .AND(""(SELECT a.role  FROM ai_chat_history a WHERE a.assistantId = ? AND a.sessionId = ? ORDER BY a.inserted_at DESC LIMiT 1)='user'"", aid, sid)
+        .ORDER_BY(""a.inserted_at DESC"")
+        .LIMIT(10)
+        .Execute(db)
+        .GetResultAsMapList();
+}
+function getSids(aid) {
+    return sql.SELECT(""DISTINCT a.sessionId"").FROM(""ai_chat_history"", ""a"")
+        .WHERE(""a.assistantId=?"", aid)
+        .Execute(db)
+        .GetResultAsList();
+}
+function checkAndReply(aid) {
+    var sids = getSids(aid);
+    for (var i = 0; i < sids.length; i++) {
+        var hs = getChatHistory(aid, sids[i]);
+        if (hs && hs.length) {
+            aiReply(sids[i], hs);
+        }
+    }
+}
+function aiReply(to, msgs) {
+    var headers = { Authorization: ""Bearer "" + aiCfg.key, ""Content-Type"": ""application/json"" };
+    var ms = [initMsg];
+    for (var i = 0; i < msgs.length; i++) {
+        ms.push(msgs[i]);
+    }
+    var body = { ""model"": aiCfg.model || ""deepseek-chat"", ""messages"": ms, ""stream"": aiCfg.stream || false };
+    var o = { method: ""POST"", headers: headers, body: JSON.stringify(body) };
+    var a = fetch(aiCfg.url + (aiCfg.path || ""/chat/completions""), o);
+    var statusCode = a.statusCode;
+    if (statusCode == 200) {
+        var rsp = JSON.parse(a.response);
+        var rsp0 = rsp.choices[0];
+        var rspMsg = rsp0.message;
+        var err = msender.NewMail()
+            .SetTo(to)
+            .SetBody(rspMsg.content)
+            .SetSubject(""Assistant Reply"")
+            .Send();
+        saveChatHistory(aid, to, err ? err.Error() : ""ok"", ""Assistant Reply"", rspMsg.role, rspMsg.content);
+        return;
+    }
+    return;
+}",,assistant,,2025-02-09T22:38:01+08:00,2025-02-09T23:16:18+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+8b66c490b69ba837612a060f300d3f64,发送邮件测试,"var host = ""smtp.wios.cloud"";
+var port = ""587"";
+var username = ""assistant@wios.cloud"";
+var password = ""6CUCr53FtM"";
+var msender = newMailSender(username, password, host, port, ""."");
+msender.NewMail()
+.SetTo(""ccloomi@icloud.com"")
+.SetBody(""欢迎使用wios cloud"")
+.SetSubject(""欢迎使用WiOS"")
+.Send();",,script,,2025-02-09T16:15:45+08:00,2025-02-09T16:15:45+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 960c6512d24bf055c8f4c00169220dce,send mail with files demo,"sendMailWithFiles(
     ""Test Files"",
     ""File List"",
@@ -118,6 +319,58 @@ function getFlagInfo(d,data){
     ""089b040711795293846fce0cfc07d56fc5f986deb7f8f6855ab08f2b9f480b46"",
     ""b.jpeg""
 )",,script,,2024-05-31T16:31:36+08:00,2024-05-31T16:31:36+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+ab373ff836c3d0edd3ed80cb95da1377,微信Ai助手,"var aiCfg = sysCfg[""sys.ai""];
+var a = webot.GetCurrentUser();
+var u = a[0];
+var fs = u.Friends()[0];
+var gs = u.Groups(true)[0];
+var g = gs.SearchByNickName(1, ""牛市🐂🐂🐂🐂"")[0];
+var f = fs.SearchByNickName(1, ""君"")[0];
+console.log(JSON.stringify([u.NickName, u.ID(), u.HeadImgUrl, u.Sex, g, f]));
+var body = {
+    ""model"": ""deepseek-chat"",
+    ""messages"": [],
+    ""stream"": false
+}
+var sexMap = [""女"", ""男""];
+var headers = { Authorization: ""Bearer "" + aiCfg.key, ""Content-Type"": ""application/json"" };
+var umap = {};
+var initMsg = { ""role"": ""system"", ""content"": ""你是一个万能的助手!你的名字是: "" + u.NickName };
+webot.OnMsg(function (msg) {
+    console.log(""Receive wechat msg!"");
+    console.log(JSON.stringify({ from: msg.FromUserName, MsgId: msg.MsgId, msgType: msg.MsgType, content: msg.Content, createTime: msg.CreateTime, to: msg.ToUserName, self: u.UserName }));
+    if (msg.IsText() && msg.Content && !msg.IsSendBySelf()) {
+        if (msg.IsSendByGroup() && msg.Content.lastIndexOf(""@"" + u.NickName) < 0) {
+            return;
+        }
+        //get history msgs
+        var msgs = umap[msg.FromUserName] || (umap[msg.FromUserName] = [initMsg]);
+        msgs.push({ role: ""user"", content: msg.Content });
+        body.messages = msgs;
+        var o = { method: ""POST"", headers: headers, body: JSON.stringify(body) };
+        var a = fetch(aiCfg.url + ""/chat/completions"", o);
+        var statusCode = a.statusCode;
+        console.log(a.response);
+        if (statusCode == 200) {
+            var rsp = JSON.parse(a.response);
+            var rsp0 = rsp.choices[0];
+            var rspMsg = rsp0.message;
+            msgs.push(rspMsg);
+            // webot.SendText(rspMsg.content, msg.FromUserName, true);
+            msg.ReplyText(rspMsg.content);
+            return;
+        }
+        return;
+    }
+    if (msg.IsFriendAdd()) {
+        msg.Agree(""我同意了"");
+    }
+}, self);
+
+self.Title = ""微信Ai助手""
+while (true) {
+    sleep(1000)
+}",,script,,2025-01-28T20:34:51+08:00,2025-02-02T08:56:34+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 ac60584a5c9a432dd1881cd6501c0bd9,系统配置查询,"var data = sql.SELECT(""c.value"")
     .FROM(""sys_config"", ""c"")
     .WHERE(""c.name=?"", args[0])
@@ -128,6 +381,123 @@ bb4913c521d995892f42ac8c8aa310e8,Bing images,"var url = ""https://bing.com/HPIma
 var a= fetch(url,{});
 a = JSON.parse(a.response);
 a.images;",,api,,2024-06-13T08:50:43+08:00,2024-06-13T09:09:49+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+bc4e99a285c2a806d7862d4a89874779,邮箱Ai助手,"self.Title = ""邮箱Ai助手"";
+var aiCfg = sysCfg[""sys.ai""];
+var initMsg = { ""role"": ""system"", ""content"": ""你是一个万能的助手!你的名字是: Smart Rob"" };
+var aid = ""36b3bc46dd7acdc159708896f9fc6377"";
+var tableName = ""ai_chat_history"";
+var host = ""smtp.wios.cloud"";
+var port = ""587"";
+var addr = ""imap.wios.cloud:993"";
+var username = ""assistant@wios.cloud"";
+var password = ""6CUCr53FtM"";
+var msender = newMailSender(username, password, host, port, ""."");
+var a = newImapClient(addr, username, password);
+while (true) {
+    if (a[0]) {
+        var client = a[0];
+        self.Finally(function () {
+            client.Logout();
+        });
+        getMail(client);
+        checkAndReply(aid);
+    }
+    sleep(5000);
+}
+function getMail(client) {
+    var ms = fetchMail(""INBOX"", 10, client)[0];
+    if (ms) {
+        var ids = [];
+        var uidMap = {};
+        for (var i = 0; i < ms.length; i++) {
+            ids.push(ms[i].Id);
+            uidMap[ms[i].Id] = ms[i].Uid;
+        }
+        var uids = checkMsgId(ids, uidMap);
+        var ms = fetchMailByUid(""INBOX"", client, uids)[0];
+        if (ms && ms.length) {
+            console.log(""Receive new emails:"" + ms.length);
+            saveEmail(ms);
+        }
+    }
+}
+function saveEmail(ms) {
+    for (var i = 0; i < ms.length; i++) {
+        var mi = ms[i];
+        saveChatHistory(aid, mi.From, mi.Id,mi.Subject, ""user"", mi.Body[""text/plain""]);
+    }
+}
+function saveChatHistory(aid, sid, msgId,subject, role, content) {
+    var rs = sql.INSERT_INTO(tableName, ""id"", ""assistantId"", ""sessionId"", ""msgId"",""subject"", ""role"", ""content"", ""inserted_at"", ""updated_at"").VALUES(exp.UUID(), aid, sid, msgId,subject,role, content, exp.Now(), exp.Now()).Execute(db).Update();
+    return rs.RowsAffected();
+}
+function checkMsgId(ids, uidMap) {
+    var sm = sql.SELECT(""a.msgId"").FROM(tableName, ""a"")
+        .WHERE_IN(""a.msgId"", ""IN"", ids);
+    sm.LOGSQL(false);
+    var ls = sm.Execute(db).GetResultAsList();
+    var map = {};
+    for (var i = 0; i < ls.length; i++) {
+        map[ls[i]] = true;
+    }
+    var uids = [];
+    for (var i = 0; i < ids.length; i++) {
+        if (map[ids[i]]) {
+            continue;
+        }
+        uids.push(uidMap[ids[i]]);
+    }
+    return uids;
+}
+function getChatHistory(aid, sid) {
+    return sql.SELECT(""a.role"", ""a.content"").FROM(""ai_chat_history"", ""a"")
+        .WHERE(""a.assistantId=?"", aid)
+        .AND(""a.sessionId=?"", sid)
+        .AND(""(SELECT a.role  FROM ai_chat_history a WHERE a.assistantId = ? AND a.sessionId = ? ORDER BY a.inserted_at DESC LIMiT 1)='user'"", aid, sid)
+        .ORDER_BY(""a.inserted_at DESC"")
+        .LIMIT(10)
+        .Execute(db)
+        .GetResultAsMapList();
+}
+function getSids(aid) {
+    return sql.SELECT(""DISTINCT a.sessionId"").FROM(""ai_chat_history"", ""a"")
+        .WHERE(""a.assistantId=?"", aid)
+        .Execute(db)
+        .GetResultAsList();
+}
+function checkAndReply(aid) {
+    var sids = getSids(aid);
+    for (var i = 0; i < sids.length; i++) {
+        var hs = getChatHistory(aid, sids[i]);
+        if (hs && hs.length) {
+            aiReply(sids[i], hs);
+        }
+    }
+}
+function aiReply(to, msgs) {
+    var headers = { Authorization: ""Bearer "" + aiCfg.key, ""Content-Type"": ""application/json"" };
+    var ms = [initMsg];
+    for (var i = 0; i < msgs.length; i++) {
+        ms.push(msgs[i]);
+    }
+    var body = { ""model"": ""deepseek-chat"", ""messages"": ms, ""stream"": false };
+    var o = { method: ""POST"", headers: headers, body: JSON.stringify(body) };
+    var a = fetch(aiCfg.url + ""/chat/completions"", o);
+    var statusCode = a.statusCode;
+    if (statusCode == 200) {
+        var rsp = JSON.parse(a.response);
+        var rsp0 = rsp.choices[0];
+        var rspMsg = rsp0.message;
+        var err = msender.NewMail()
+            .SetTo(to)
+            .SetBody(rspMsg.content)
+            .SetSubject(""Assistant Reply"")
+            .Send();
+        saveChatHistory(aid, to, err?err.Error():""ok"",""Assistant Reply"", rspMsg.role, rspMsg.content);
+        return;
+    }
+    return;
+}",,script,,2025-02-05T22:02:11+08:00,2025-02-09T21:09:45+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 be0d1312ddf59a4b0864b91277b76900,银联国际汇率查询,"
 var url = getUrl(0);
 var rsp = fetch(url,{method:""GET""});
@@ -147,6 +517,9 @@ function fdate(d,nd){
 function fv(v){
     return ('0' + v).slice(-2);
 }",,api,,2024-05-13T22:36:52+08:00,2024-05-15T09:45:13+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+c231d7ad4578167e4667c99c279f49bb,获取微信当前登录用户昵称,"var url = webot.Login(null,10)[0];
+var u = webot.GetCurrentUser()[0];
+[url,u&&u.NickName];",,script,,2024-11-04T11:56:00+08:00,2024-11-22T21:01:26+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 c4abb167ea8395cfd0dded69a9736932,海关编码分页查询,"byPage(function (sm, opts) {
     sm.SELECT(""*"")
     .FROM(""hs_info"",""h"")
@@ -202,6 +575,26 @@ var total = parseInt(t.AttrOr(""data-all"", ""0""),10);
     total: total,
     baseUrl: ""https://www.dpm.org.cn""
 });",,api,,2024-06-26T15:28:12+08:00,2024-10-04T18:14:26+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+cafcadf18222718d7027f418ad7d786a,获取A股模拟账户信息,"var acc = futuapi.GetCNSimAcc(ctx,false)[0];
+var af = futuapi.GetFunds(ctx,acc,false)[0];
+var ps = futuapi.GetPositions(ctx,acc,true)[0];
+({
+        ""AccID"":acc.AccID,
+        ""CardNum"":acc.CardNum,
+        ""UniCardNum"":acc.UniCardNum,
+        ""TrdEnv"":futuapi.TrdEnvName(acc.TrdEnv),
+        ""AccType"":futuapi.TrdAccTypeName(acc.AccType),
+        ""AccStatus"":futuapi.TrdAccStatusName(acc.AccStatus),
+        ""SecurityFirm"":futuapi.SecurityFirmName(acc.SecurityFirm),
+        ""TrdMarketAuthList"":futuapi.TrdMarketNames(acc.TrdMarketAuthList),
+        ""Currency"":futuapi.GetAccCurrencyNames(acc),
+        ""Cash"":af&&af.Cash||0,
+        ""DebtCash"":af&&af.DebtCash||0,
+        ""FrozenCash"":af&&af.FrozenCash||0,
+        ""AvlWithdrawalCash"":af&&af.AvlWithdrawalCash||0,
+        ""TotalAssets"":af&&af.TotalAssets||0,
+        ""Positions"":ps
+    });",,script,,2024-11-16T10:15:43+08:00,2024-11-16T11:51:01+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 d2aa577745ad8b00f2d8ee5ce8f2bda6,查询亚马逊某卖家产品列表,"var url =""https://www.amazon.com/s?me=A1O0JIKRUZNJ9&marketplaceID=ATVPDKIKX0DER"";
 var selector = '.s-search-results [data-asin]:not([data-asin=""""])>div>div>span>div>div>div>div';
 var a = fetch(url);
@@ -211,12 +604,138 @@ var L = ls.Length();
 for(var i=0;i<L;i++){
     var d0 = ls.Eq(i);
 }",,api,,2024-07-25T20:00:40+08:00,2024-07-25T20:22:40+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+d2b66f4a748e221026b20c6173364af1,FUTU系统通知监听,"self.Title=""富途系统通知监控""
+futuapi.SysNotify(ctx,function(noty){
+    console.log(noty);
+})",,,,2024-11-17T02:09:50+08:00,2024-11-23T07:37:57+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+d56110109c5f555f3097807346711d62,获取证券交易账户,"
+var a = futuapi.GetAccList(ctx,0,true);
+var accList = a[0];
+var fList = [];
+for(var i=0;i<accList.length;i++){
+    var acc = accList[i];
+    var af = futuapi.GetFunds(ctx,acc,false)[0];
+    fList.push({
+        ""AccID"":acc.AccID,
+        ""CardNum"":acc.CardNum,
+        ""UniCardNum"":acc.UniCardNum,
+        ""TrdEnv"":futuapi.TrdEnvName(acc.TrdEnv),
+        ""AccType"":futuapi.TrdAccTypeName(acc.AccType),
+        ""AccStatus"":futuapi.TrdAccStatusName(acc.AccStatus),
+        ""SecurityFirm"":futuapi.SecurityFirmName(acc.SecurityFirm),
+        ""TrdMarketAuthList"":futuapi.TrdMarketNames(acc.TrdMarketAuthList),
+        ""Currency"":futuapi.GetAccCurrencyNames(acc),
+        ""Cash"":af&&af.Cash||0,
+        ""DebtCash"":af&&af.DebtCash||0,
+        ""FrozenCash"":af&&af.FrozenCash||0,
+        ""AvlWithdrawalCash"":af&&af.AvlWithdrawalCash||0,
+        ""TotalAssets"":af&&af.TotalAssets||0
+    });
+}
+fList;",,,,2024-11-06T10:35:53+08:00,2024-11-16T10:32:50+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+d6a83dbbacb868938f3a3eef17d765e4,AI聊天,"var aiCfg = sysCfg[""sys.ai""];
+var body = {
+    ""model"": ""deepseek-chat"",
+    ""messages"": [
+        {
+            ""role"": ""system"",
+            ""content"": ""You are a helpful assistant.""
+        },
+        {
+            ""role"": ""user"",
+            ""content"": ""Hello!""
+        }
+    ],
+    ""stream"": false
+}
+var a = fetch(aiCfg.url + ""/chat/completions"",
+    {
+        method: ""POST"",
+        headers: {
+            Authorization: ""Bearer "" + aiCfg.key,
+            ""Content-Type"":""application/json""
+        },
+        body: JSON.stringify(body)
+    }
+);
+var rsp = JSON.parse(a.response);
+// var status = a.status;
+// var statusCode = a.statusCode;
+// var cookies = a.cookies();
+// [rsp,status,statusCode,cookies];
+rsp;",,script,,2025-01-28T17:34:52+08:00,2025-01-28T17:59:43+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+db72df5abacf831471a6a09aa96b0742,查询某个助手某个会话下是否有新消息,"var aid = ""36b3bc46dd7acdc159708896f9fc6377"";
+var sid = ""ccloomi@gmail.com"";
+function onNewEmail(aid,sid){
+    return sql.SELECT(""a.role"",""a.content"").FROM(""ai_chat_history"",""a"")
+    .WHERE(""a.assistantId=?"",aid)
+    .AND(""a.sessionId=?"",sid)
+    .AND(""(SELECT a.role  FROM ai_chat_history a WHERE a.assistantId = ? AND a.sessionId = ? ORDER BY a.inserted_at DESC LIMiT 1)='user'"",aid,sid)
+    .ORDER_BY(""a.inserted_at DESC"")
+    .LIMIT(10)
+    .Execute(db)
+    .GetResultAsMapList();
+}
+onNewEmail(aid,sid);",,script,,2025-02-09T14:15:50+08:00,2025-02-09T14:54:46+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 dc56e0c788bd4bded21c9955a857141a,dht set get test,"var ctx = context.Background();
 //dht.PutValue(ctx,""/v/name"",str2bs(""Seemie""));
 //dht.PutValue(ctx,""/v/name"",v2bs({name:""Seemie"",age:19}));
 var a = dht.GetValue(ctx,""/v/name"");
 // bs2str(a[0])
 bs2v(a[0]);",,,,2024-07-10T19:49:15+08:00,2024-10-04T08:58:55+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+dece20b9a414b22844cda1509faf30f7,微信发送信息测试,"var a = webot.GetCurrentUser();
+var u = a[0];
+var fs = u.Friends()[0];
+var gs = u.Groups(true)[0];
+var g = gs.SearchByNickName(1,""牛市🐂🐂🐂🐂"")[0];
+var f = fs.SearchByNickName(1,""君"")[0];
+[u.NickName,u.ID(),u.HeadImgUrl,u.Sex,g,f]
+
+webot.SendText(""顺丰控股买入2300股价格44.32"",""君"",false);
+// UserName不是唯一只是相对于这个登录用户是唯一的
+//webot.SendText(""Hello!"",""@a4caad9b0bedf4e44d8aebcc88e77660924e6b7da46a031e5b57e7829d9a539c"",false);
+//webot.SendText(""这是一条测试消息。"",""牛市🐂🐂🐂🐂"",true);
+",,,,2024-11-09T08:30:35+08:00,2024-11-09T18:51:03+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+eb3c2605294df053e03090a33c76ce78,获取市场状态,"var a= futuapi.GetGlobalState(ctx)[0];
+
+({
+    ""ConnID"":a.ConnID,
+    ""LocalTime"":a.LocalTime,
+    ""MarketHK"":futuapi.MktStateName(a.MarketHK),
+    ""MarketHKFuture"":futuapi.MktStateName(a.MarketHKFuture),
+    ""MarketJPFuture"": futuapi.MktStateName(a.MarketJPFuture),
+    ""MarketSGFuture"": futuapi.MktStateName(a.MarketSGFuture),
+    ""MarketSH"": futuapi.MktStateName(a.MarketSH),
+    ""MarketSZ"": futuapi.MktStateName(a.MarketSZ),
+    ""MarketUS"": futuapi.MktStateName(a.MarketUS),
+    ""MarketUSFuture"": futuapi.MktStateName(a.MarketUSFuture),
+    ""ProgramStatus"":futuapi.ProgramStatusName(a.ProgramStatus.Type),
+    ""QotLogined"": a.QotLogined,
+    ""QotSvrIpAddr"": a.QotSvrIpAddr,
+    ""ServerBuildNo"": a.ServerBuildNo,
+    ""ServerVer"": a.ServerVer,
+    ""Time"": a.Time,
+    ""TrdLogined"": a.TrdLogined,
+    ""TrdSvrIpAddr"": a.TrdSvrIpAddr
+});",,,,2024-11-06T11:12:43+08:00,2024-11-16T22:09:21+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+ef89f10a29b8afc551f0dbab3749c8e0,查询聊天记录,"var tableName = ""ai_chat_history"";
+// sql.SELECT(""*"").FROM(tableName,""a"")
+// .Execute(db).GetResultAsMapList();
+
+function saveChatHistory(aid, sid, msgId, role, content) {
+    var rs = sql.INSERT_INTO(tableName, ""id"", ""assistantId"", ""sessionId"", ""msgId"", ""role"", ""content"", ""inserted_at"", ""updated_at"").VALUES(exp.UUID(), aid, sid, msgId, role, content, exp.Now(), exp.Now()).Execute(db).Update();
+    return rs.RowsAffected();
+}
+var aid = ""36b3bc46dd7acdc159708896f9fc6377"";
+var sid = ""assistant@wios.cloud"";
+// saveChatHistory(aid, sid, ""48ga56sdg4s9dg@wios.cloud"", ""user"", ""Hi,How are you?"");
+// saveChatHistory(aid, sid, """", ""assistant"", ""Hi,How can i assistant you tady?"");
+function checkMsgId(ids) {
+    return sql.SELECT(""a.msgId"").FROM(tableName, ""a"")
+        .WHERE_IN(""a.msgId"",""IN"", ids)
+        .Execute(db).GetResultAsList();
+}
+checkMsgId(""48ga56sdg4s9dg@wios.cloud"")",,script,,2025-02-08T20:22:35+08:00,2025-02-08T23:12:02+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 f4670379cd150a73ede8b125be44251f,Fetch currency info,"var url = ""https://www.ifreesite.com/currency.htm"";
 var a = fetch(url);
 var q="".tooltext> div.if_titlename,table.if_tabletd>tbody tbody"";
