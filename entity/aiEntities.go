@@ -22,6 +22,7 @@ type AiChatHistory struct {
 	Subject     *string `orm:"varchar(255) comment '主题'" column:"subject" json:"subject"`
 	Role        *string `orm:"varchar(32) comment '角色'" column:"role" json:"role"`
 	Content     *string `orm:"longtext comment '消息内容'" column:"content" json:"content"`
+	ReplyStatus *string `orm:"varchar(255) comment '回复状态'" column:"replyStatus" json:"replyStatus"`
 	entity.TimeEntity
 }
 

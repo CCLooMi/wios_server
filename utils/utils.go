@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -12,6 +13,7 @@ import (
 	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/dustin/go-humanize"
 	"github.com/xuri/excelize/v2"
+	"github.com/yuin/goldmark"
 	"go.uber.org/fx"
 	"html/template"
 	"math/big"
@@ -466,6 +468,13 @@ func ParseBytesI32(s string, df int) int {
 		return df
 	}
 	return int(v)
+}
+func MarkdownToHtml(text string) string {
+	var buf bytes.Buffer
+	if err := goldmark.Convert([]byte(text), &buf); err != nil {
+		return text
+	}
+	return buf.String()
 }
 
 var Module = fx.Options(

@@ -191,7 +191,7 @@ var tableName = ""ai_chat_history"";
 var host = ""smtp."" + aiCfg.host;
 var port = aiCfg.smtpPort || ""587"";
 var addr = ""imap."" + aiCfg.host + "":"" + (aiCfg.imapPort || ""993"");
-var username = aiCfg.username+""@""+aiCfg.host;
+var username = aiCfg.username + ""@"" + aiCfg.host;
 var password = aiCfg.password;
 var msender = newMailSender(username, password, host, port, ""."");
 var a = newImapClient(addr, username, password);
@@ -226,11 +226,13 @@ function getMail(client) {
 function saveEmail(ms) {
     for (var i = 0; i < ms.length; i++) {
         var mi = ms[i];
-        saveChatHistory(aid, mi.From, mi.Id, mi.Subject, ""user"", mi.Body[""text/plain""]);
+        saveChatHistory(aid, mi.From, mi.Id, mi.Subject, ""user"", mi.Body[""text/plain""],"""");
     }
 }
-function saveChatHistory(aid, sid, msgId, subject, role, content) {
-    var rs = sql.INSERT_INTO(tableName, ""id"", ""assistantId"", ""sessionId"", ""msgId"", ""subject"", ""role"", ""content"", ""inserted_at"", ""updated_at"").VALUES(exp.UUID(), aid, sid, msgId, subject, role, content, exp.Now(), exp.Now()).Execute(db).Update();
+function saveChatHistory(aid, sid, msgId, subject, role, content, replyStatus) {
+    var im = sql.INSERT_INTO(tableName, ""id"", ""assistantId"", ""sessionId"", ""msgId"", ""subject"", ""role"", ""content"", ""replyStatus"", ""inserted_at"", ""updated_at"").VALUES(exp.UUID(), aid, sid, msgId, subject, role, content, replyStatus, exp.Now(), exp.Now());
+    im.LOGSQL(false);
+    var rs = im.Execute(db).Update();
     return rs.RowsAffected();
 }
 function checkMsgId(ids, uidMap) {
@@ -252,20 +254,22 @@ function checkMsgId(ids, uidMap) {
     return uids;
 }
 function getChatHistory(aid, sid) {
-    return sql.SELECT(""a.role"", ""a.content"").FROM(""ai_chat_history"", ""a"")
+    var sm2 = sql.SELECT(""a.role"", ""a.content"").FROM(""ai_chat_history"", ""a"")
         .WHERE(""a.assistantId=?"", aid)
         .AND(""a.sessionId=?"", sid)
         .AND(""(SELECT a.role  FROM ai_chat_history a WHERE a.assistantId = ? AND a.sessionId = ? ORDER BY a.inserted_at DESC LIMiT 1)='user'"", aid, sid)
         .ORDER_BY(""a.inserted_at DESC"")
-        .LIMIT(10)
-        .Execute(db)
-        .GetResultAsMapList();
+        .LIMIT(10);
+    sm2.LOGSQL(false);
+    var sm = sql.SELECT(""a.role"", ""a.content"").FROM(sm2, ""a"").ORDER_BY(""a.inserted_at"");
+    sm.LOGSQL(false);
+    return sm.Execute(db).GetResultAsMapList();
 }
 function getSids(aid) {
-    return sql.SELECT(""DISTINCT a.sessionId"").FROM(""ai_chat_history"", ""a"")
-        .WHERE(""a.assistantId=?"", aid)
-        .Execute(db)
-        .GetResultAsList();
+    var sm = sql.SELECT(""DISTINCT a.sessionId"").FROM(""ai_chat_history"", ""a"")
+        .WHERE(""a.assistantId=?"", aid);
+    sm.LOGSQL(false);
+    return sm.Execute(db).GetResultAsList();
 }
 function checkAndReply(aid) {
     var sids = getSids(aid);
@@ -295,11 +299,11 @@ function aiReply(to, msgs) {
             .SetBody(rspMsg.content)
             .SetSubject(""Assistant Reply"")
             .Send();
-        saveChatHistory(aid, to, err ? err.Error() : ""ok"", ""Assistant Reply"", rspMsg.role, rspMsg.content);
+        saveChatHistory(aid, to, """", ""Assistant Reply"", rspMsg.role, rspMsg.content,err ? err.Error() : ""ok"");
         return;
     }
     return;
-}",,assistant,,2025-02-09T22:38:01+08:00,2025-02-09T23:16:18+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
+}",,assistant,,2025-02-09T22:38:01+08:00,2025-02-10T09:23:04+08:00,9abf3113201316de9e558e12d614f9c2,9abf3113201316de9e558e12d614f9c2
 8b66c490b69ba837612a060f300d3f64,发送邮件测试,"var host = ""smtp.wios.cloud"";
 var port = ""587"";
 var username = ""assistant@wios.cloud"";

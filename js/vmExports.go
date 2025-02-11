@@ -98,6 +98,7 @@ func doRegExports(ut *utils.Utils, config *conf.Config, db *sql.DB) {
 	RegExport("coordinatesToCellName", utils.CoordinatesToCellName)
 	RegExport("UUID", utils.UUID)
 	RegExport("uuid", utils.UUID)
+	RegExport("markdownToHtml", utils.MarkdownToHtml)
 	RegExport("sql", mysqlM)
 	RegExport("exp", expM)
 	RegExport("template", templateM)
