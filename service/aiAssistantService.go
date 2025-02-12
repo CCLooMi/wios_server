@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"wios_server/dao"
 	"wios_server/entity"
@@ -42,4 +43,10 @@ func (dao *AiAssistantService) SaveUpdates(aiAssistants []entity.AiAssistant) []
 		list[i] = &aiAssistants[i]
 	}
 	return dao.BatchSaveOrUpdate(list...)
+}
+func (dao *AiAssistantService) SetStatus(id interface{}, status string) sql.Result {
+	um := mysql.UPDATE(entity.AiAssistant{}, "a").
+		SET("a.status = ?", status).
+		WHERE("id = ?", id)
+	return dao.ExecuteUm(um).Update()
 }

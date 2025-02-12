@@ -1,12 +1,22 @@
 package entity
 
-import "github.com/CCLooMi/sql-mak/mysql/entity"
+import (
+	"github.com/CCLooMi/sql-mak/mysql/entity"
+	"time"
+)
 
 type AiAssistant struct {
 	entity.IdEntity
-	Name   *string `orm:"varchar(255) comment '名称'" column:"name" json:"name"`
-	Conf   *string `orm:"json comment '配置'" column:"conf" json:"conf"`
-	Prompt *string `orm:"text comment '提示语'" column:"prompt" json:"prompt"`
+	ScriptId    *string    `orm:"varchar(32) comment '脚本ID'" column:"scriptId" json:"scriptId"`
+	ScriptDesc  *string    `orm:"varchar(255) comment '脚本描述'" column:"scriptDesc" json:"scriptDesc"`
+	Name        *string    `orm:"varchar(255) comment '名称'" column:"name" json:"name"`
+	Conf        *string    `orm:"json comment '配置'" column:"conf" json:"conf"`
+	Prompt      *string    `orm:"text comment '提示语'" column:"prompt" json:"prompt"`
+	BootType    *int       `orm:"int(11) comment '1:开机启动 0:手动'" column:"bootType" json:"bootType"`
+	Status      *string    `orm:"varchar(32) comment '运行状态running,stopped'" column:"status" json:"status"`
+	MaxInstance *int       `orm:"int(11) comment '最大实例数'" column:"maxInstance" json:"maxInstance"`
+	FlagId      *string    `orm:"varchar(32) comment '标签ID'" column:"flagId" json:"flagId"`
+	FlagExp     *time.Time `orm:"datetime(6) comment '过期时间'" column:"flagExp" json:"flagExp"`
 	entity.TimeEntity
 }
 

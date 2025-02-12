@@ -2,8 +2,12 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
+	"log"
+	"time"
 	"wios_server/entity"
 	"wios_server/handlers/msg"
 	"wios_server/js"
@@ -38,6 +42,7 @@ func NewAiAssistantController(app *gin.Engine, db *sql.DB, ut *utils.Utils) *AiA
 		middlewares.RegisterAuth(&hds[i])
 		group.Handle(hd.Method, hd.Path, hd.Handler)
 	}
+	ctrl.startTask()
 	return ctrl
 }
 
@@ -121,11 +126,7 @@ func (ctrl *AiAssistantController) run(c *gin.Context) {
 		msg.Error(c, "invalid assistant id")
 		return
 	}
-	sid, ok := reqBody["sid"].(string)
-	if !ok || sid == "" {
-		msg.Error(c, "invalid script id")
-		return
-	}
+
 	ui, ok := c.Get("userInfo")
 	if !ok {
 		msg.Error(c, "userInfo not found")
@@ -136,41 +137,11 @@ func (ctrl *AiAssistantController) run(c *gin.Context) {
 		msg.Error(c, "userInfo not found")
 		return
 	}
-	var aiAssistant = &entity.AiAssistant{}
-	ctrl.aiAssistantService.ById(aid, aiAssistant)
-	if aiAssistant.Id == nil {
-		msg.Error(c, "invalid assistant id")
+	err := ctrl.runAiAssistantById(aid, userInfo)
+	if err != nil {
+		msg.Error(c, err.Error())
 		return
 	}
-	var api = &entity.Api{}
-	ctrl.apiService.ById(sid, api)
-	if api.Id == nil {
-		msg.Error(c, "invalid script id")
-		return
-	}
-	var vm = js.NewVm(aiAssistant.Name, userInfo.User)
-	vm.Set("userInfo", userInfo)
-	vm.Set("aid", aid)
-	vm.Set("aiAssistant", aiAssistant)
-	vm.Set("msg", js.NewMsgUtil(c))
-	vm.Set("byPage", func(f func(sm *mak.SQLSM, opts interface{})) {
-		middlewares.ByPageMap(reqBody, c, func(page *middlewares.Page) (int64, any, error) {
-			if page.PageNumber < 0 {
-				page.PageNumber = 0
-			} else {
-				page.PageNumber -= 1
-			}
-			sm := mak.NewSQLSM()
-			f(sm, page.Opts)
-			sm.LIMIT(page.PageNumber*page.PageSize, page.PageSize)
-			out := sm.Execute(ctrl.db).GetResultAsMapList()
-			if page.PageNumber == 0 {
-				return sm.Execute(ctrl.db).Count(), out, nil
-			}
-			return -1, out, nil
-		})
-	})
-	go vm.Execute(*api.Script)
 	msg.Ok(c, "ok")
 	return
 }
@@ -186,4 +157,80 @@ func (ctrl *AiAssistantController) chatHistory(c *gin.Context) {
 			sm.ORDER_BY("a.updated_at DESC", "a.inserted_at DESC", "a.id")
 		})
 	})
+}
+
+func (ctrl *AiAssistantController) startTask() {
+	flag := func(flagId string) int64 {
+		um := mysql.UPDATE(entity.AiAssistant{}, "a").
+			SET("a.flagId = ?", flagId).
+			SET("a.flagExp = (NOW(6)+?)", 10).
+			WHERE("a.bootType = 1").
+			AND("(a.status = 'stopped' OR a.status IS NULL)").
+			AND("(a.flagExp < NOW(6) OR a.flagExp IS NULL)").
+			LIMIT(3)
+		um.LOGSQL(false)
+		r := ctrl.aiAssistantService.ExecuteUm(um).Update()
+		n, err := r.RowsAffected()
+		if err != nil {
+			log.Println(err)
+		}
+		return n
+	}
+	go func() {
+		flagId := utils.UUID()
+		userInfo := &middlewares.UserInfo{
+			User: &entity.User{
+				Nickname: "Ai Assistant Task",
+			},
+		}
+		sm := mysql.SELECT("a.id").
+			FROM(entity.AiAssistant{}, "a").
+			WHERE("a.flagId =?", flagId).
+			AND("a.bootType = 1").
+			AND("(a.status = 'stopped' OR a.status IS NULL)").
+			LIMIT(3)
+		sm.LOGSQL(false)
+		for {
+			n := flag(flagId)
+			if n == 0 {
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			aiAssistants := ctrl.aiAssistantService.ExecuteSM(sm).GetResultAsList()
+			for _, aiAssistant := range aiAssistants {
+				aid := aiAssistant.(**string)
+				ctrl.runAiAssistantById(**aid, userInfo)
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}()
+	log.Printf("ai assistant task started")
+}
+func (ctrl *AiAssistantController) runAiAssistantById(aid string, userInfo *middlewares.UserInfo) error {
+	//recover
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println(err)
+		}
+	}()
+	aiAssistant := &entity.AiAssistant{}
+	ctrl.aiAssistantService.ById(aid, aiAssistant)
+	if aiAssistant.Id == nil {
+		return errors.New("invalid assistant id")
+	}
+	var api = &entity.Api{}
+	ctrl.apiService.ById(*aiAssistant.ScriptId, api)
+	if api.Id == nil {
+		return errors.New("invalid script id")
+	}
+	var vm = js.NewVm(aiAssistant.Name, userInfo.User)
+	vm.Set("userInfo", userInfo)
+	vm.Set("aid", aid)
+	vm.Set("aiAssistant", aiAssistant)
+	vm.Finally(func() {
+		ctrl.aiAssistantService.SetStatus(aiAssistant.Id, "stopped")
+	})
+	ctrl.aiAssistantService.SetStatus(aiAssistant.Id, "running")
+	go vm.Execute(*api.Script)
+	return nil
 }
