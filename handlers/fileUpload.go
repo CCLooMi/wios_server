@@ -318,7 +318,7 @@ func HandleFileUpload(app *gin.Engine, config *conf.Config, db *sql.DB, ut *util
 				}
 				return middlewares.GetUserInfo(c, ut) != nil
 			},
-			Subprotocols: []string{"wstore"},
+			Subprotocols: []string{"wstore", "PhotoZen"},
 		}
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
