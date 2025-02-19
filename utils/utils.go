@@ -476,6 +476,16 @@ func MarkdownToHtml(text string) string {
 	}
 	return buf.String()
 }
+func SetTimeout(callback func(), delay time.Duration) func() {
+	timer := time.NewTimer(delay)
+	go func() {
+		<-timer.C
+		callback()
+	}()
+	return func() {
+		timer.Stop()
+	}
+}
 
 var Module = fx.Options(
 	fx.Provide(

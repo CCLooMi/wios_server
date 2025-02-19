@@ -58,6 +58,7 @@ type DatastoreConfig struct {
 	MaxOpenFiles int    `yaml:"max_open_files"`
 }
 type FutuApiConfig struct {
+	Enable  bool   `yaml:"enable"`
 	ApiAddr string `yaml:"api_addr"`
 }
 
@@ -70,6 +71,7 @@ type Config struct {
 	Header        map[string]string   `yaml:"header"`
 	LogLevel      string              `yaml:"log_level"`
 	Port          string              `yaml:"port"`
+	DisableServer bool                `yaml:"disable_server"`
 	EnableHttps   bool                `yaml:"enable_https"`
 	CertFile      string              `yaml:"https_cert_file"`
 	KeyFile       string              `yaml:"https_key_file"`

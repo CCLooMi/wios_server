@@ -2,9 +2,11 @@ package js
 
 import (
 	"context"
+	"github.com/ipfs/go-cid"
 	pebbleds "github.com/ipfs/go-ds-pebble"
 	"github.com/libp2p/go-libp2p"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	kbucket "github.com/libp2p/go-libp2p-kbucket"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
@@ -78,9 +80,71 @@ func bootstrapDHT(log *zap.Logger, ctx context.Context, kadDHT *dht.IpfsDHT, boo
 	// Bootstrap the DHT
 	return kadDHT.Bootstrap(ctx)
 }
-
 func regExport(kadDHT *dht.IpfsDHT, config *conf.Config) {
-	RegExport("dht", kadDHT)
+	RegExport("dht", &JDHT{kadDHT})
+}
+
+type JDHT struct {
+	kdht *dht.IpfsDHT
+}
+
+func (d *JDHT) ListPeerIds() []string {
+	t := d.kdht.RoutingTable()
+	pids := t.ListPeers()
+	ids := make([]string, len(pids))
+	for i, p := range pids {
+		ids[i] = p.String()
+	}
+	return ids
+}
+
+func (d *JDHT) PeerID() string {
+	return d.kdht.PeerID().String()
+}
+
+func (d *JDHT) FindPeer(ctx context.Context, peerId string) (peer.AddrInfo, error) {
+	id, err := peer.Decode(peerId)
+	if err != nil {
+		return peer.AddrInfo{}, err
+	}
+	return d.kdht.FindPeer(ctx, id)
+}
+func (d *JDHT) FindProviders(ctx context.Context, key string) ([]peer.AddrInfo, error) {
+	id, err := cid.Parse(key)
+	if err != nil {
+		return nil, err
+	}
+	return d.kdht.FindProviders(ctx, id)
+}
+func (d *JDHT) Provide(ctx context.Context, key string) error {
+	id, err := cid.Decode(key)
+	if err != nil {
+		return err
+	}
+	return d.kdht.Provide(ctx, id, true)
+}
+func (d *JDHT) Put(ctx context.Context, key string, value []byte) error {
+	return d.kdht.PutValue(ctx, key, value)
+}
+func (d *JDHT) Get(ctx context.Context, key string) ([]byte, error) {
+	return d.kdht.GetValue(ctx, key)
+}
+func (d *JDHT) RouteTable() *kbucket.RoutingTable {
+	return d.kdht.RoutingTable()
+}
+func (d *JDHT) Ping(ctx context.Context, peerId string) error {
+	id, err := peer.Decode(peerId)
+	if err != nil {
+		return err
+	}
+	return d.kdht.Ping(ctx, id)
+}
+func (d *JDHT) FindLocal(ctx context.Context, peerId string) peer.AddrInfo {
+	id, err := peer.Decode(peerId)
+	if err != nil {
+		return peer.AddrInfo{}
+	}
+	return d.kdht.FindLocal(ctx, id)
 }
 
 var dhtModule = fx.Options(

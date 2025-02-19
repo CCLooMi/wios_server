@@ -542,6 +542,10 @@ func newFutuApi(config *conf.Config) *futuapi.FutuAPI {
 	return api
 }
 func connectFutuApi(lc fx.Lifecycle, api *futuapi.FutuAPI, config *conf.Config) *futuapi.FutuAPI {
+	ftCfg := config.FutuApiConf
+	if !ftCfg.Enable {
+		return nil
+	}
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
@@ -567,6 +571,7 @@ func connectFutuApi(lc fx.Lifecycle, api *futuapi.FutuAPI, config *conf.Config) 
 			return nil
 		},
 	})
+	RegExport("futuapi", NewFTApi(api, &config.FutuApiConf))
 	return api
 }
 
@@ -574,8 +579,5 @@ var futuApiModule = fx.Options(
 	fx.Provide(newFutuApi),
 	fx.Invoke(
 		connectFutuApi,
-		func(fapi *futuapi.FutuAPI, config *conf.Config) {
-			RegExport("futuapi", NewFTApi(fapi, &config.FutuApiConf))
-		},
 	),
 )

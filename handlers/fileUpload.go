@@ -369,6 +369,7 @@ func onClose(cnn *websocket.Conn, cnnAddress int64) {
 func onStrMsg(workDir string, fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
 	CheckExist(workDir, fileInfo, cnn, cnnAddress, uploadServer)
 }
+
 func onBinMsg(msg []byte, cnn *websocket.Conn, uploadServer *service.UploadService) {
 	start := binary.BigEndian.Uint64(msg[:8])
 	bidLen := binary.BigEndian.Uint32(msg[8 : 8+4])

@@ -35,6 +35,9 @@ func newGinApp() (*gin.Engine, error) {
 }
 
 func startServer(lc fx.Lifecycle, app *gin.Engine, config *conf.Config) {
+	if config.DisableServer {
+		return
+	}
 	server := &http.Server{
 		Addr:    ":" + config.Port,
 		Handler: app,
