@@ -21,6 +21,7 @@ var Module = fx.Options(
 		NewOrgController,
 		NewRoleController,
 		NewUploadController,
+		NewFilesController,
 		NewApiController,
 		NewConfigController,
 		NewStoreUserController,
