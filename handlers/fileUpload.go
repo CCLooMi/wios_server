@@ -26,8 +26,8 @@ const BlobSize = 524288
 
 var agentMap = make(map[string]*FileAgent)
 var uploaderMap = make(map[int64]*FileAgent)
-var muAgentMap sync.Mutex    // 保护 agentMap 的锁
-var muUploaderMap sync.Mutex // 保护 uploaderMap 的锁
+var muAgentMap sync.RWMutex    // 使用 RWMutex 提高并发性能
+var muUploaderMap sync.RWMutex // 使用 RWMutex 提高并发性能
 var iSetMap = []byte{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -119,8 +119,6 @@ func (fa *FileAgent) GetBSetFileName() string {
 	return filepath.Join(fa.BasePath, "up.meta")
 }
 func (fa *FileAgent) SaveToMetaData() {
-	fa.mu.Lock() // 加锁
-	defer fa.mu.Unlock()
 	data := make([]byte, 8+len(fa.BSet))
 	binary.BigEndian.PutUint64(data, uint64(fa.Uploaded))
 	copy(data[8:], fa.BSet)
@@ -140,6 +138,7 @@ func (fa *FileAgent) Dispose() {
 	if len(fa.Uploader) == 0 {
 		if fa.AgentFile != nil {
 			fa.AgentFile.Close()
+			fa.AgentFile = nil
 		}
 		delete(agentMap, fa.hexId())
 	}
@@ -238,7 +237,8 @@ func CheckExist(workDir string, fileInfo *FileInfo, cnn *websocket.Conn, cnnAddr
 	if fa == nil {
 		fa, err = NewFileAgen(fileInfo, basePath, bid)
 		if err != nil {
-			panic(err)
+			log.Println("Failed to create file agent:", err)
+			return
 		}
 	}
 	refFa := uploaderMap[cnnAddress]
@@ -374,10 +374,9 @@ func onClose(cnn *websocket.Conn, cnnAddress int64) {
 	fa := uploaderMap[cnnAddress]
 	if fa != nil {
 		fa.mu.Lock()
-		defer fa.mu.Unlock()
 		delete(fa.Uploader, cnnAddress)
-		muAgentMap.Lock()
-		defer muAgentMap.Unlock()
+		fa.mu.Unlock()
+
 		delete(uploaderMap, cnnAddress)
 		fa.Dispose()
 	}
