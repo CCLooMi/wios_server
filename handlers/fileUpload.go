@@ -342,7 +342,11 @@ func HandleFileUpload(app *gin.Engine, config *conf.Config, db *sql.DB, ut *util
 			// 读取消息
 			msgType, msg, err := conn.ReadMessage()
 			if err != nil {
-				log.Println("Failed to read message from WebSocket:", err)
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+					log.Println("WebSocket closed normally")
+				} else {
+					log.Println("Failed to read message from WebSocket:", err)
+				}
 				break
 			}
 			// 处理消息
@@ -402,9 +406,10 @@ func onBinMsg(msg []byte, cnn *websocket.Conn, uploadServer *service.UploadServi
 	} else {
 		fa.CommandComplete(cmd, msg[8+4+bidLen:])
 	}
-	//update upload size
-	uploadServer.UpdateUploadSize(&id, &fa.Uploaded)
+
 	if fa.Complete {
+		//update upload size
+		uploadServer.UpdateUploadSize(&id, &fa.Uploaded)
 		PushFinishedCmd(bid, cnn)
 		return
 	}
