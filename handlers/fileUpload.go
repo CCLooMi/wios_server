@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"unsafe"
 	"wios_server/conf"
 	"wios_server/entity"
@@ -25,6 +26,8 @@ const BlobSize = 524288
 
 var agentMap = make(map[string]*FileAgent)
 var uploaderMap = make(map[int64]*FileAgent)
+var muAgentMap sync.Mutex    // 保护 agentMap 的锁
+var muUploaderMap sync.Mutex // 保护 uploaderMap 的锁
 var iSetMap = []byte{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -60,6 +63,7 @@ type FileAgent struct {
 	Uploaded  int64
 	Uploader  map[int64]bool
 	cmdMap    map[uint64]*UploadCommand
+	mu        sync.Mutex // 加入锁保护
 }
 type UploadCommand struct {
 	Id       []byte
@@ -71,6 +75,8 @@ type UploadCommand struct {
 }
 
 func (fa *FileAgent) NextCommand(cmd *UploadCommand) *FileAgent {
+	fa.mu.Lock() // 加锁
+	defer fa.mu.Unlock()
 	if fa.Complete {
 		//TODO
 		return fa
@@ -89,6 +95,8 @@ func (fa *FileAgent) NextCommand(cmd *UploadCommand) *FileAgent {
 	return fa
 }
 func (fa *FileAgent) CommandComplete(cmd *UploadCommand, data []byte) {
+	fa.mu.Lock() // 加锁
+	defer fa.mu.Unlock()
 	fa.AgentFile.WriteAt(data, cmd.Start)
 	fa.Uploaded += cmd.End - cmd.Start
 	SetBSetPositionBit1(fa.BSet, cmd.Idx)
@@ -111,6 +119,8 @@ func (fa *FileAgent) GetBSetFileName() string {
 	return filepath.Join(fa.BasePath, "up.meta")
 }
 func (fa *FileAgent) SaveToMetaData() {
+	fa.mu.Lock() // 加锁
+	defer fa.mu.Unlock()
 	data := make([]byte, 8+len(fa.BSet))
 	binary.BigEndian.PutUint64(data, uint64(fa.Uploaded))
 	copy(data[8:], fa.BSet)
@@ -125,6 +135,8 @@ func (fa *FileAgent) hexId() string {
 	return hex.EncodeToString(fa.Id)
 }
 func (fa *FileAgent) Dispose() {
+	fa.mu.Lock() // 加锁
+	defer fa.mu.Unlock()
 	if len(fa.Uploader) == 0 {
 		if fa.AgentFile != nil {
 			fa.AgentFile.Close()
@@ -194,17 +206,13 @@ func NewFileAgen(fileInfo *FileInfo, basePath string, bid []byte) (*FileAgent, e
 	fa.LoadMetaData(metaData)
 	return fa, nil
 }
-func PushFinishedCmd(bid []byte, cnn *websocket.Conn) {
-	idLen := len(bid)
-	bb := make([]byte, 4+idLen)
-	binary.BigEndian.PutUint32(bb, uint32(idLen))
-	copy(bb[4:], bid)
-	pushBinMsg(bb, cnn)
-}
+
 func CheckExist(workDir string, fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
 	fid := fileInfo.Id
 	bid, _ := hex.DecodeString(fid)
 	basePath := path.Join(workDir, utils.GetFPathByFid(fid))
+	muAgentMap.Lock() // 加锁
+	defer muAgentMap.Unlock()
 	if _, err := os.Stat(filepath.Join(basePath, "0")); err == nil {
 		PushFinishedCmd(bid, cnn)
 		//start save update file info
@@ -223,6 +231,8 @@ func CheckExist(workDir string, fileInfo *FileInfo, cnn *websocket.Conn, cnnAddr
 		//end save update file info
 		return
 	}
+	muUploaderMap.Lock() // 加锁
+	defer muUploaderMap.Unlock()
 	fa := agentMap[fid]
 	var err error
 	if fa == nil {
@@ -359,9 +369,15 @@ func onOpen(cnn *websocket.Conn, cnnAddress int64) {
 }
 func onClose(cnn *websocket.Conn, cnnAddress int64) {
 	cnn.Close()
+	muUploaderMap.Lock()
+	defer muUploaderMap.Unlock()
 	fa := uploaderMap[cnnAddress]
 	if fa != nil {
+		fa.mu.Lock()
+		defer fa.mu.Unlock()
 		delete(fa.Uploader, cnnAddress)
+		muAgentMap.Lock()
+		defer muAgentMap.Unlock()
 		delete(uploaderMap, cnnAddress)
 		fa.Dispose()
 	}
@@ -375,6 +391,8 @@ func onBinMsg(msg []byte, cnn *websocket.Conn, uploadServer *service.UploadServi
 	bidLen := binary.BigEndian.Uint32(msg[8 : 8+4])
 	bid := msg[8+4 : 8+4+bidLen]
 	id := hex.EncodeToString(bid)
+	muAgentMap.Lock() // 加锁
+	defer muAgentMap.Unlock()
 	fa := agentMap[id]
 	if fa == nil {
 		return
@@ -393,6 +411,13 @@ func onBinMsg(msg []byte, cnn *websocket.Conn, uploadServer *service.UploadServi
 	}
 	fa.NextCommand(cmd)
 	pushBinMsg(cmd.toBytes(), cnn)
+}
+func PushFinishedCmd(bid []byte, cnn *websocket.Conn) {
+	idLen := len(bid)
+	bb := make([]byte, 4+idLen)
+	binary.BigEndian.PutUint32(bb, uint32(idLen))
+	copy(bb[4:], bid)
+	pushBinMsg(bb, cnn)
 }
 func pushStrMsg(msg string, cnn *websocket.Conn) error {
 	return cnn.WriteMessage(websocket.TextMessage, []byte(msg))
