@@ -102,6 +102,7 @@ func (dao *WppService) IsWpp(fid *string) *string {
 		FROM(&entity.ReleaseNote{}, "rn").
 		WHERE("rn.file_id = ?", fid).
 		LIMIT(1)
+	sm.LOGSQL(false)
 	var s *string
 	dao.ExecuteSM(sm).ExtractorResultSet(func(rs *sql.Rows) interface{} {
 		for rs.Next() {

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -100,8 +99,6 @@ func (fa *FileAgent) CommandComplete(cmd *UploadCommand, data []byte) {
 	fa.AgentFile.WriteAt(data, cmd.Start)
 	fa.Uploaded += cmd.End - cmd.Start
 	SetBSetPositionBit1(fa.BSet, cmd.Idx)
-	log.Println("Received file data:",
-		float64(fa.Uploaded)/float64(fa.Size)*100, "%")
 	if fa.Uploaded >= fa.Size {
 		//rename file
 		fa.AgentFile.Close()
@@ -112,7 +109,6 @@ func (fa *FileAgent) CommandComplete(cmd *UploadCommand, data []byte) {
 		os.Remove(fa.GetBSetFileName())
 		fa.Complete = true
 		delete(agentMap, cmd.hexId())
-		log.Println(fa.BSet)
 	}
 }
 func (fa *FileAgent) GetBSetFileName() string {
@@ -314,59 +310,8 @@ func NewBSet(fSize int64) []byte {
 	}
 }
 
-func HandleFileUpload(app *gin.Engine, config *conf.Config, db *sql.DB, ut *utils.Utils) {
-	path := config.FileServer.Path
-	uploadServer := service.NewUploadService(db)
-	app.GET(path, func(c *gin.Context) {
-		// 获取客户端发送的协议参数
-		protocols := c.Request.Header["Sec-Websocket-Protocol"]
-		// 升级HTTP连接为WebSocket连接
-		upgrader := websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				if len(protocols) > 0 && "wstore" == protocols[0] {
-					return middlewares.GetStoreUserInfo(c, ut) != nil
-				}
-				return middlewares.GetUserInfo(c, ut) != nil
-			},
-			Subprotocols: []string{"wstore", "PhotoZen"},
-		}
-		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-		if err != nil {
-			http.Error(c.Writer, err.Error(), http.StatusUnauthorized)
-			return
-		}
-		address := int64(uintptr(unsafe.Pointer(conn)))
-		defer onClose(conn, address)
-		onOpen(conn, address)
-		for {
-			// 读取消息
-			msgType, msg, err := conn.ReadMessage()
-			if err != nil {
-				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-					log.Println("WebSocket closed normally")
-				} else {
-					log.Println("Failed to read message from WebSocket:", err)
-				}
-				break
-			}
-			// 处理消息
-			if msgType == websocket.TextMessage {
-				log.Println("Received string message:", string(msg))
-				var fileInfo = FileInfo{}
-				err := json.Unmarshal(msg, &fileInfo)
-				if err != nil {
-					fmt.Println("Error:", err)
-					break
-				}
-				onStrMsg(config.FileServer.SaveDir, &fileInfo, conn, address, uploadServer)
-				continue
-			}
-			if msgType == websocket.BinaryMessage {
-				onBinMsg(msg, conn, uploadServer)
-				continue
-			}
-		}
-	})
+func HandleFileUpload(app *gin.Engine, config *conf.Config, ut *utils.Utils) {
+	handleWebSocket(app, config, ut)
 }
 func onOpen(cnn *websocket.Conn, cnnAddress int64) {
 
@@ -388,7 +333,6 @@ func onClose(cnn *websocket.Conn, cnnAddress int64) {
 func onStrMsg(workDir string, fileInfo *FileInfo, cnn *websocket.Conn, cnnAddress int64, uploadServer *service.UploadService) {
 	CheckExist(workDir, fileInfo, cnn, cnnAddress, uploadServer)
 }
-
 func onBinMsg(msg []byte, cnn *websocket.Conn, uploadServer *service.UploadService) {
 	start := binary.BigEndian.Uint64(msg[:8])
 	bidLen := binary.BigEndian.Uint32(msg[8 : 8+4])
@@ -428,4 +372,54 @@ func pushStrMsg(msg string, cnn *websocket.Conn) error {
 }
 func pushBinMsg(msg []byte, cnn *websocket.Conn) error {
 	return cnn.WriteMessage(websocket.BinaryMessage, msg)
+}
+func handleWebSocket(app *gin.Engine, config *conf.Config, ut *utils.Utils) {
+	path := config.FileServer.Path
+	uploadServer := service.NewUploadService(ut.Db)
+	app.GET(path, func(c *gin.Context) {
+		// 获取客户端发送的协议参数
+		protocols := c.Request.Header["Sec-Websocket-Protocol"]
+		// 升级HTTP连接为WebSocket连接
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				if len(protocols) > 0 && "wstore" == protocols[0] {
+					return middlewares.GetStoreUserInfo(c, ut) != nil
+				}
+				return middlewares.GetUserInfo(c, ut) != nil
+			},
+			Subprotocols: []string{"wstore", "PhotoZen"},
+		}
+		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		if err != nil {
+			http.Error(c.Writer, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		address := int64(uintptr(unsafe.Pointer(conn)))
+		defer onClose(conn, address)
+		onOpen(conn, address)
+		for {
+			// 读取消息
+			msgType, msg, err := conn.ReadMessage()
+			if err != nil {
+				log.Println("Failed to read message from WebSocket:", err)
+				break
+			}
+			// 处理消息
+			if msgType == websocket.TextMessage {
+				log.Println("Received string message:", string(msg))
+				var fileInfo = FileInfo{}
+				err := json.Unmarshal(msg, &fileInfo)
+				if err != nil {
+					fmt.Println("Error:", err)
+					break
+				}
+				onStrMsg(config.FileServer.SaveDir, &fileInfo, conn, address, uploadServer)
+				continue
+			}
+			if msgType == websocket.BinaryMessage {
+				onBinMsg(msg, conn, uploadServer)
+				continue
+			}
+		}
+	})
 }
