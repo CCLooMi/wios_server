@@ -32,7 +32,9 @@ func NewFilesController(app *gin.Engine, db *sql.DB) *FilesController {
 func (ctrl *FilesController) byPage(ctx *gin.Context) {
 	middlewares.ByPage(ctx, func(page *middlewares.Page) (int64, any, error) {
 		return ctrl.filesService.ListByPage(page.PageNumber, page.PageSize, func(sm *mak.SQLSM) {
-			sm.SELECT("*").FROM(entity.Files{}, "f")
+			sm.SELECT("*").
+				FROM(entity.Files{}, "f").
+				ORDER_BY("f.inserted_at DESC", "f.id")
 		})
 	})
 }

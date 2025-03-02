@@ -46,7 +46,24 @@ func ServerUploadFile(app *gin.Engine, db *sql.DB, config *conf.Config, ut *util
 				return
 			}
 		}
-		ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileId))
+		name := ctx.Query("name")
+		if name != "" {
+			ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, name))
+		} else {
+			ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileId))
+		}
+		// response file data
+		ctx.File(filePath)
+	})
+	app.GET("/upload/:fileId/*fileName", func(ctx *gin.Context) {
+		fileId := ctx.Param("fileId")
+		fileName := ctx.Param("fileName")
+		filePath := path.Join(config.FileServer.SaveDir, utils.GetFPathByFid(fileId), fileName)
+		// check if file exists
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			ctx.String(http.StatusNotFound, "File not found")
+			return
+		}
 		// response file data
 		ctx.File(filePath)
 	})

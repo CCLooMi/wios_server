@@ -121,6 +121,7 @@ type Files struct {
 	DelFlag  *bool      `orm:"tinyint comment '删除标识1删除0未删除'" column:"del_flag" json:"delFlag"`
 	FlagId   *string    `orm:"varchar(32) comment '标记ID'" column:"flag_id" json:"flagId"`
 	FlagExp  *time.Time `orm:"datetime(6) comment '标记过期时间'" column:"flag_exp" json:"flagExp"`
+	Status   *string    `orm:"varchar(10) comment '文件状态'" column:"status" json:"status"`
 	entity.TimeEntity
 }
 

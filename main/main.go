@@ -14,6 +14,7 @@ import (
 	"wios_server/handlers"
 	"wios_server/js"
 	"wios_server/middlewares"
+	"wios_server/task"
 	"wios_server/utils"
 )
 
@@ -25,6 +26,7 @@ func main() {
 		handlers.Module,
 		js.Module,
 		mainModule,
+		task.Module,
 	)
 	fxa.Run()
 	waitForSignal(fxa)
