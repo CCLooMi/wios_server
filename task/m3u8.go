@@ -1,6 +1,7 @@
 package task
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 	"wios_server/entity"
 	"wios_server/utils"
@@ -134,24 +136,107 @@ func startVideoProcessor(lc fx.Lifecycle, ut *utils.Utils) {
 		},
 	})
 }
+func getCodec(inputPath string) (string, string, error) {
+	cmd := exec.Command(
+		"ffprobe",
+		"-v", "error",
+		"-select_streams", "v:0",
+		"-show_entries", "stream=codec_name",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		inputPath,
+	)
+	cmd2 := exec.Command(
+		"ffprobe",
+		"-v", "error",
+		"-select_streams", "a:0",
+		"-show_entries", "stream=codec_name",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		inputPath,
+	)
+	vCode, err := exeCmd(cmd)
+	if err != nil {
+		return "", "", err
+	}
+	aCode, err := exeCmd(cmd2)
+	if err != nil {
+		return "", "", err
+	}
+	return vCode, aCode, nil
+}
+func exeCmd(cmd *exec.Cmd) (string, error) {
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out.String()), nil
+}
+
+var vMap = map[string]bool{"h264": true, "hevc": true, "vp8": true, "vp9": true, "av1": true}
+var aMap = map[string]bool{"aac": true, "ac3": true, "opus": true, "vorbis": true, "flac": true, "mp3": true, "pcm": true}
 
 func convertToM3U8(ctx context.Context, inputPath string) error {
+	vCode, aCode, err := getCodec(inputPath)
+	if err != nil {
+		return err
+	}
+
 	dir := filepath.Dir(inputPath)
 	outputDir := filepath.Join(dir, "hls")
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("create output dir error: %v", err)
 	}
 	outputPath := path.Join(outputDir, "0.m3u8")
-	cmd := exec.CommandContext(ctx,
-		getFFmpegPath(),
+
+	// 动态构建 FFmpeg 参数
+	cmdArgs := []string{
+		"-hwaccel", "auto",
 		"-i", inputPath,
-		"-codec:", "copy", // 保持原始编码
-		"-start_number", "0", // 分片从0开始
-		"-hls_time", "10", // 每个分片10秒
-		"-hls_list_size", "0", // 保留所有分片记录
-		"-f", "hls", // 输出格式
+		// 映射所有流
+		"-map", "0",
+		// 字幕强制转 WebVTT（HLS 唯一支持的字幕格式）
+		"-c:s", "webvtt",
+	}
+
+	// 视频编码处理（支持则复制，否则转 H.264）
+	if vMap[vCode] {
+		cmdArgs = append(cmdArgs, "-c:v", "copy")
+		log.Printf("视频流使用原始编码: %s", vCode)
+	} else {
+		//vCodec := hasNvidiaNVENC()?"h264_nvenc":
+		if hasNvidiaNVENC() {
+			cmdArgs = append(cmdArgs, "-c:v", "h264_nvenc")
+		} else {
+			cmdArgs = append(cmdArgs, "-c:v", "libx264")
+		}
+		cmdArgs = append(cmdArgs,
+			"-preset", "fast", // 平衡速度与质量
+			"-sc_threshold", "0", // 强制场景切换生成关键帧
+		)
+		log.Printf("视频流转码为 H.264 (原编码: %s)", vCode)
+	}
+
+	// 音频编码处理（支持则复制，否则转 AAC）
+	if aMap[aCode] {
+		cmdArgs = append(cmdArgs, "-c:a", "copy")
+		log.Printf("音频流使用原始编码: %s", aCode)
+	} else {
+		cmdArgs = append(cmdArgs,
+			"-c:a", "aac",
+		)
+		log.Printf("音频流转码为 AAC (原编码: %s)", aCode)
+	}
+	cmdArgs = append(cmdArgs,
+		// HLS 通用参数
+		"-start_number", "0",
+		"-hls_time", "10",
+		"-hls_list_size", "0",
+		"-hls_flags", "independent_segments",
+		"-f", "hls",
 		outputPath,
 	)
+	cmd := exec.CommandContext(ctx, getFFmpegPath(), cmdArgs...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("Execute FFmpeg command error: %v\n output: %s", err, string(output))
 	}
@@ -163,7 +248,15 @@ func convertToM3U8(ctx context.Context, inputPath string) error {
 
 	return nil
 }
-
+func hasNvidiaNVENC() bool {
+	// Windows: 检查 nvidia-smi 是否存在
+	// Linux: 检查 /dev/nvidia* 设备或运行 nvidia-smi
+	cmd := exec.Command("nvidia-smi")
+	if err := cmd.Run(); err == nil {
+		return true
+	}
+	return false
+}
 func getFFmpegPath() string {
 	// check default path
 	if path, err := exec.LookPath("ffmpeg"); err == nil {
