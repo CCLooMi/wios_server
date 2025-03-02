@@ -21,7 +21,7 @@ func startDZIServer(lc fx.Lifecycle, ut *utils.Utils) {
 	doFlag := func(flagId string) int64 {
 		um := mysql.UPDATE(entity.Files{}, "f").
 			SET("f.flag_id = ?", flagId).
-			SET("f.flag_exp = (NOW(6)+?)", 10).
+			SET("f.flag_exp = DATE_ADD(NOW(6), INTERVAL ? SECOND)", 20).
 			WHERE("f.status IS NULL").
 			AND("f.file_type LIKE 'image/%'").
 			AND("(f.flag_exp < NOW(6) OR f.flag_exp IS NULL)").
@@ -36,7 +36,7 @@ func startDZIServer(lc fx.Lifecycle, ut *utils.Utils) {
 	}
 	keepLock := func(flagId string) int64 {
 		um := mysql.UPDATE(entity.Files{}, "f").
-			SET("f.flag_exp = (NOW(6)+?)", 10).
+			SET("f.flag_exp = DATE_ADD(NOW(6), INTERVAL ? SECOND)", 20).
 			WHERE("f.status IS NULL").
 			AND("f.flag_id = ?", flagId).
 			LIMIT(3)
@@ -114,7 +114,7 @@ func startDZIServer(lc fx.Lifecycle, ut *utils.Utils) {
 					select {
 					case <-mainCtx.Done():
 						return
-					case <-time.After(9 * time.Second):
+					case <-time.After(10 * time.Second):
 					}
 				}
 			}()

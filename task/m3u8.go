@@ -22,7 +22,7 @@ func startVideoProcessor(lc fx.Lifecycle, ut *utils.Utils) {
 	doFlag := func(flagID string) int64 {
 		um := mysql.UPDATE(entity.Files{}, "f").
 			SET("f.flag_id = ?", flagID).
-			SET("f.flag_exp = (NOW(6)+?)", 10). // 锁定10秒
+			SET("f.flag_exp = DATE_ADD(NOW(6), INTERVAL ? SECOND)", 20). // 锁定10秒
 			WHERE("f.status IS NULL").
 			AND("f.file_type LIKE 'video/%'"). // 只处理视频文件
 			AND("(f.flag_exp < NOW(6) OR f.flag_exp IS NULL)").
@@ -39,7 +39,7 @@ func startVideoProcessor(lc fx.Lifecycle, ut *utils.Utils) {
 	// 保持处理锁
 	keepLock := func(flagID string) int64 {
 		um := mysql.UPDATE(entity.Files{}, "f").
-			SET("f.flag_exp = (NOW(6)+?)", 10).
+			SET("f.flag_exp = DATE_ADD(NOW(6), INTERVAL ? SECOND)", 20).
 			WHERE("f.status IS NULL").
 			AND("f.flag_id = ?", flagID).
 			LIMIT(3)
@@ -118,7 +118,7 @@ func startVideoProcessor(lc fx.Lifecycle, ut *utils.Utils) {
 					select {
 					case <-mainCtx.Done():
 						return
-					case <-time.After(9 * time.Second):
+					case <-time.After(10 * time.Second):
 					}
 				}
 			}()
