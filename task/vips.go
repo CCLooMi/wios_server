@@ -136,7 +136,7 @@ func genDzi(inputPath string) error {
 	ext := filepath.Ext(base)
 	baseName := strings.TrimSuffix(base, ext)
 	outputBase := filepath.Join(dir, baseName)
-	cmd := exec.Command(getVipsPath(), "dzsave", inputPath, outputBase,
+	cmd := exec.Command(GetVipsPath(), "dzsave", inputPath, outputBase,
 		"--layout", "dz",
 		//"--depth", "onetile",
 		"--suffix", ".jpg[Q=90]",
@@ -147,7 +147,7 @@ func genDzi(inputPath string) error {
 	}
 	return nil
 }
-func getVipsPath() string {
+func GetVipsPath() string {
 	// check default path
 	if path, err := exec.LookPath("vips"); err == nil {
 		return path

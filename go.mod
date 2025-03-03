@@ -17,7 +17,6 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/gorilla/websocket v1.5.3
-	github.com/h2non/bimg v1.1.9
 	github.com/ipfs/go-cid v0.5.0
 	github.com/ipfs/go-ds-pebble v0.3.1
 	github.com/json-iterator/go v1.1.12

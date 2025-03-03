@@ -3,6 +3,7 @@ package task
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/CCLooMi/sql-mak/mysql"
 	"go.uber.org/fx"
@@ -174,7 +175,7 @@ func exeCmd(cmd *exec.Cmd) (string, error) {
 }
 
 var vMap = map[string]bool{"h264": true, "hevc": true, "vp8": true, "vp9": true, "av1": true}
-var aMap = map[string]bool{"aac": true, "ac3": true, "opus": true, "vorbis": true, "flac": true, "mp3": true, "pcm": true}
+var aMap = map[string]bool{"aac": true, "opus": true, "vorbis": true, "flac": true, "mp3": true, "pcm": true}
 
 func convertToM3U8(ctx context.Context, inputPath string) error {
 	vCode, aCode, err := getCodec(inputPath)
@@ -193,10 +194,8 @@ func convertToM3U8(ctx context.Context, inputPath string) error {
 	cmdArgs := []string{
 		"-hwaccel", "auto",
 		"-i", inputPath,
-		// 映射所有流
-		"-map", "0",
-		// 字幕强制转 WebVTT（HLS 唯一支持的字幕格式）
-		"-c:s", "webvtt",
+		"-map", "0:v",
+		"-map", "0:a",
 	}
 
 	// 视频编码处理（支持则复制，否则转 H.264）
@@ -224,6 +223,9 @@ func convertToM3U8(ctx context.Context, inputPath string) error {
 	} else {
 		cmdArgs = append(cmdArgs,
 			"-c:a", "aac",
+			"-b:a", "128k",
+			"-ar", "48000",
+			"-ac", "2", //将 AC3 5.1 声道转换为立体声（HLS 兼容）
 		)
 		log.Printf("音频流转码为 AAC (原编码: %s)", aCode)
 	}
@@ -236,6 +238,7 @@ func convertToM3U8(ctx context.Context, inputPath string) error {
 		"-f", "hls",
 		outputPath,
 	)
+	log.Printf("FFmpeg command: %s", strings.Join(cmdArgs, " "))
 	cmd := exec.CommandContext(ctx, getFFmpegPath(), cmdArgs...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("Execute FFmpeg command error: %v\n output: %s", err, string(output))
@@ -246,7 +249,13 @@ func convertToM3U8(ctx context.Context, inputPath string) error {
 		return fmt.Errorf("expected output file not found: %s", outputPath)
 	}
 
-	return nil
+	streams, err := getSubtitleStreams(inputPath)
+	if err != nil {
+		return err
+	}
+	dir = filepath.Dir(inputPath)
+	outputDir = filepath.Join(dir, "hls")
+	return extractSubtitles(inputPath, streams, outputDir)
 }
 func hasNvidiaNVENC() bool {
 	// Windows: 检查 nvidia-smi 是否存在
@@ -273,4 +282,81 @@ func getFFmpegPath() string {
 		return "ffmpeg"
 	}
 	return ffmpegPath
+}
+
+type FFProbeOutput struct {
+	Streams []SubtitleStream `json:"streams"`
+}
+type SubtitleStream struct {
+	Index     int               `json:"index"`
+	CodecName string            `json:"codec_name"`
+	Tags      map[string]string `json:"tags"`
+}
+
+func extractSubtitles(videoFile string, streams []SubtitleStream, outputDir string) error {
+	list := make([]map[string]string, 0)
+	for _, stream := range streams {
+		subtitleFile := fmt.Sprintf("%s/subtitle_%d.vtt", outputDir, stream.Index)
+		subtitleFileName := fmt.Sprintf("subtitle_%d.vtt", stream.Index)
+		cmd := exec.Command("ffmpeg",
+			"-i", videoFile,
+			"-map", fmt.Sprintf("0:%d", stream.Index),
+			"-c:s", "webvtt",
+			subtitleFile, "-y")
+		err := cmd.Run()
+		if err != nil {
+			log.Println("字幕转换失败:", err)
+			continue
+		}
+		title := stream.Tags["title"]
+		if title == "" {
+			title = stream.Tags["language"]
+		}
+		webvttFiles := make(map[string]string)
+		webvttFiles["src"] = subtitleFileName
+		webvttFiles["label"] = title
+		webvttFiles["srclang"] = stream.Tags["language"]
+		list = append(list, webvttFiles)
+	}
+	//save to json
+	file, _ := json.Marshal(list)
+	return os.WriteFile(fmt.Sprintf("%s/webvtt.json", outputDir), file, 0644)
+}
+
+func getSubtitleStreams(videoFile string) ([]SubtitleStream, error) {
+	cmd := exec.Command("ffprobe",
+		"-v", "quiet",
+		"-print_format", "json",
+		"-show_streams",
+		"-select_streams", "s",
+		videoFile)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	var probeOutput FFProbeOutput
+	err = json.Unmarshal(out.Bytes(), &probeOutput)
+	if err != nil {
+		return nil, err
+	}
+
+	return probeOutput.Streams, nil
+}
+
+func ProcessSubtitle(saveDir string, fid string) error {
+	fpath := path.Join(saveDir, utils.GetFPathByFid(fid), "0")
+	absPath, err := filepath.Abs(fpath)
+	if err != nil {
+		return err
+	}
+	streams, err := getSubtitleStreams(absPath)
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(absPath)
+	outputDir := filepath.Join(dir, "hls")
+	return extractSubtitles(absPath, streams, outputDir)
 }
