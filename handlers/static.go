@@ -6,7 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
+	"strconv"
 	"wios_server/conf"
 	"wios_server/middlewares"
 	"wios_server/service"
@@ -52,6 +55,56 @@ func ServerUploadFile(app *gin.Engine, db *sql.DB, config *conf.Config, ut *util
 		} else {
 			ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileId))
 		}
+		w := ctx.Query("w")
+		h := ctx.Query("h")
+		var width, height = 0, 0
+		var err error
+		if w != "" {
+			width, err = strconv.Atoi(w)
+			if err != nil {
+				width = 0
+			}
+		}
+		if h != "" {
+			height, err = strconv.Atoi(h)
+			if err != nil {
+				height = 0
+			}
+		}
+		// If width or height is provided, resize the image
+		if width > 0 || height > 0 {
+			absPath0, err := filepath.Abs(filePath)
+			if err != nil {
+				ctx.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+			fname := fmt.Sprintf("%d_%d.jpg", width, height)
+			resizedFilePath := path.Join(filepath.Dir(absPath0), fname)
+			if name == "" {
+				ctx.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fname))
+			}
+			_, err = os.Stat(resizedFilePath)
+			if err == nil {
+				ctx.File(resizedFilePath)
+				return
+			}
+			args := []string{
+				absPath0,
+				"-s", fmt.Sprintf("%dx%d", width, height),
+				"-o", resizedFilePath,
+			}
+			// Run the vips command to resize the image
+			cmd := exec.Command(getVipsThumbnailPath(), args...)
+			err = cmd.Run()
+			if err != nil {
+				fmt.Println(err.Error())
+				ctx.String(http.StatusInternalServerError, "Error resizing image")
+				return
+			}
+			// After resizing, send the resized image to the client
+			ctx.File(resizedFilePath)
+			return
+		}
 		// response file data
 		ctx.File(filePath)
 	})
@@ -68,7 +121,23 @@ func ServerUploadFile(app *gin.Engine, db *sql.DB, config *conf.Config, ut *util
 		ctx.File(filePath)
 	})
 }
-
+func getVipsThumbnailPath() string {
+	// check default path
+	if path, err := exec.LookPath("vipsthumbnail"); err == nil {
+		return path
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "vipsthumbnail"
+	}
+	basePath := path.Join(home, "/scoop/apps/libvips/current/bin")
+	vipsthumbnailPath := filepath.Join(basePath, "vipsthumbnail")
+	_, err = os.Stat(vipsthumbnailPath)
+	if err != nil {
+		return "vipsthumbnail"
+	}
+	return vipsthumbnailPath
+}
 func getRealPath(workDir string, fid string) string {
 	return path.Join(
 		workDir,
