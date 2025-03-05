@@ -139,6 +139,7 @@ func genDzi(inputPath string) error {
 	cmd := exec.Command(GetVipsPath(), "dzsave", inputPath, outputBase,
 		"--layout", "dz",
 		//"--depth", "onetile",
+		"--tile-size", "512",
 		"--suffix", ".jpg[Q=90]",
 	)
 	out, err := cmd.CombinedOutput()
