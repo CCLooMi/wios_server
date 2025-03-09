@@ -135,3 +135,16 @@ type WppEvent struct {
 func (*WppEvent) TableName() string {
 	return "t_wpp_event"
 }
+
+type Playlist struct {
+	entity.IdEntity
+	name    *string `orm:"varchar(255) comment '名称'" column:"name" json:"name"`
+	cover   *string `orm:"varchar(64) comment '封面'" column:"cover" json:"cover"`
+	Content *string `orm:"longtext comment '播放列表内容'" column:"content" json:"content"`
+	entity.TimeEntity
+	entity.AuditEntity
+}
+
+func (*Playlist) TableName() string {
+	return "t_playlist"
+}

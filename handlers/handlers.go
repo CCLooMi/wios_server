@@ -29,6 +29,7 @@ var Module = fx.Options(
 		NewWppEventController,
 		NewWppStoryController,
 		NewAiAssistantController,
+		NewPlaylistController,
 		CorsRevertServer,
 		ServerStaticDir,
 	),

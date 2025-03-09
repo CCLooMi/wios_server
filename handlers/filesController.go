@@ -80,7 +80,7 @@ func (ctrl *FilesController) saveUpdates(ctx *gin.Context) {
 			return
 		}
 	}
-	msg.Ok(ctx, &files)
+	msg.Ok(ctx, files)
 }
 func (ctrl *FilesController) delete(ctx *gin.Context) {
 	var files entity.Files

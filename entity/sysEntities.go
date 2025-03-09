@@ -117,7 +117,7 @@ type Files struct {
 	FileName *string    `orm:"varchar(255) comment '文件名称'" column:"file_name" json:"fileName"`
 	FileType *string    `orm:"varchar(128) comment '文件类型'" column:"file_type" json:"fileType"`
 	FileSize *int64     `orm:"bigint comment '文件大小'" column:"file_size" json:"fileSize"`
-	Tags     *string    `orm:"json comment '标签'" column:"tags" json:"tags"`
+	Meta     *string    `orm:"json comment '元数据'" column:"meta" json:"meta"`
 	DelFlag  *bool      `orm:"tinyint comment '删除标识1删除0未删除'" column:"del_flag" json:"delFlag"`
 	FlagId   *string    `orm:"varchar(32) comment '标记ID'" column:"flag_id" json:"flagId"`
 	FlagExp  *time.Time `orm:"datetime(6) comment '标记过期时间'" column:"flag_exp" json:"flagExp"`
