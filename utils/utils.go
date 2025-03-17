@@ -145,15 +145,31 @@ func (u *Utils) DelFileByFid(fid string) bool {
 	fpath = fmt.Sprintf("/%d/%d", a, b)
 	basePath = path.Join(u.Config.FileServer.SaveDir, fpath)
 	if !deleteEmptyFolder(basePath) {
-		return false
+		return true
 	}
 	fpath = fmt.Sprintf("/%d", a)
 	basePath = path.Join(u.Config.FileServer.SaveDir, fpath)
 	if !deleteEmptyFolder(basePath) {
+		return true
+	}
+	return true
+}
+func (u *Utils) CheckFileExistByFid(fid string) bool {
+	bid, err := hex.DecodeString(fid)
+	if err != nil {
+		return false
+	}
+	a := int(bid[0])
+	b := int(bid[1])
+	fpath := fmt.Sprintf("/%d/%d/%s", a, b, fid)
+	basePath := path.Join(u.Config.FileServer.SaveDir, fpath)
+	_, err = os.Stat(basePath)
+	if err != nil {
 		return false
 	}
 	return true
 }
+
 func (u *Utils) BackupTableDataToCSV(tableName string, dir string, fileName string) error {
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {

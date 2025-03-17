@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"database/sql"
+	"github.com/CCLooMi/sql-mak/mysql"
 	"github.com/CCLooMi/sql-mak/mysql/mak"
 	"github.com/gin-gonic/gin"
+	"log"
 	"strings"
 	"wios_server/conf"
 	"wios_server/entity"
@@ -111,7 +113,17 @@ func (ctrl *FilesController) genSubtitle(ctx *gin.Context) {
 		return
 	}
 	if strings.HasPrefix(*files.FileType, "video/") {
-		err := task.ProcessSubtitle(ctrl.config.FileServer.SaveDir, *files.FileId)
+		err := task.ProcessSubtitle(ctrl.config.FileServer.SaveDir, *files.FileId, func(meta string) {
+			um := mysql.UPDATE(entity.Files{}, "f").
+				SET("f.meta = ?", meta).
+				WHERE("f.file_id=?", *files.FileId)
+			um.LOGSQL(false)
+			r := ctrl.filesService.ExecuteUm(um).Update()
+			_, err := r.RowsAffected()
+			if err != nil {
+				log.Printf("更新META信息失败: %v", err)
+			}
+		})
 		if err != nil {
 			msg.Error(ctx, err.Error())
 			return

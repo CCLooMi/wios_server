@@ -22,7 +22,8 @@ func startDZIServer(lc fx.Lifecycle, ut *utils.Utils) {
 		um := mysql.UPDATE(entity.Files{}, "f").
 			SET("f.flag_id = ?", flagId).
 			SET("f.flag_exp = DATE_ADD(NOW(6), INTERVAL ? SECOND)", 20).
-			WHERE("f.status IS NULL").
+			WHERE("f.file_size>1000000").
+			AND("f.status IS NULL").
 			AND("f.file_type LIKE 'image/%'").
 			AND("(f.flag_exp < NOW(6) OR f.flag_exp IS NULL)").
 			LIMIT(3)
@@ -92,7 +93,7 @@ func startDZIServer(lc fx.Lifecycle, ut *utils.Utils) {
 								continue
 							}
 
-							setStatus(**fidStr, "done")
+							setStatus(**fidStr, "dzi")
 						}
 					}
 
@@ -165,8 +166,3 @@ func GetVipsPath() string {
 	}
 	return vipsPath
 }
-
-var Module = fx.Options(
-	fx.Invoke(startDZIServer),
-	fx.Invoke(startVideoProcessor),
-)

@@ -8,14 +8,19 @@ import (
 	"wios_server/handlers/msg"
 	"wios_server/middlewares"
 	"wios_server/service"
+	"wios_server/utils"
 )
 
 type UploadController struct {
 	uploadService *service.UploadService
+	utils         *utils.Utils
 }
 
-func NewUploadController(app *gin.Engine, db *sql.DB) *UploadController {
-	ctrl := &UploadController{uploadService: service.NewUploadService(db)}
+func NewUploadController(app *gin.Engine, db *sql.DB, utils *utils.Utils) *UploadController {
+	ctrl := &UploadController{
+		uploadService: service.NewUploadService(db),
+		utils:         utils,
+	}
 	group := app.Group("/upload")
 	hds := []middlewares.Auth{
 		{Method: "POST", Group: "/upload", Path: "/byPage", Auth: "upload.list", Handler: ctrl.byPage},
@@ -55,6 +60,10 @@ func (ctrl *UploadController) delete(ctx *gin.Context) {
 	var upload entity.Upload
 	if err := ctx.ShouldBindJSON(&upload); err != nil {
 		msg.Error(ctx, err.Error())
+		return
+	}
+	if !ctrl.utils.DelFileByFid(*upload.Id) {
+		msg.Error(ctx, "delete file dir failed")
 		return
 	}
 	var rs = ctrl.uploadService.Delete(&upload)

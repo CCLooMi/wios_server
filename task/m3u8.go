@@ -68,6 +68,18 @@ func startVideoProcessor(lc fx.Lifecycle, ut *utils.Utils) {
 		}
 		return n
 	}
+	setMeta := func(fid string, meta string) int64 {
+		um := mysql.UPDATE(entity.Files{}, "f").
+			SET("f.meta = ?", meta).
+			WHERE("f.file_id=?", fid)
+		um.LOGSQL(false)
+		r := um.Execute(ut.Db).Update()
+		n, err := r.RowsAffected()
+		if err != nil {
+			log.Printf("更新META信息失败: %v", err)
+		}
+		return n
+	}
 
 	var n int64
 	lc.Append(fx.Hook{
@@ -94,13 +106,14 @@ func startVideoProcessor(lc fx.Lifecycle, ut *utils.Utils) {
 								continue
 							}
 
-							if err := convertToM3U8(mainCtx, absPath); err != nil {
+							if err := convertToM3U8(mainCtx, absPath, func(meta string) {
+								setMeta(**fidStr, meta)
+							}); err != nil {
 								log.Printf("convert to m3u8 error: %v", err)
 								setStatus(**fidStr, "error: vdo")
 								continue
 							}
-
-							setStatus(**fidStr, "done")
+							setStatus(**fidStr, "m3u8")
 						}
 					}
 
@@ -177,7 +190,7 @@ func exeCmd(cmd *exec.Cmd) (string, error) {
 var vMap = map[string]bool{"h264": true, "hevc": true, "vp8": true, "vp9": true, "av1": true}
 var aMap = map[string]bool{"aac": true, "opus": true, "vorbis": true, "flac": true, "mp3": true, "pcm": true}
 
-func convertToM3U8(ctx context.Context, inputPath string) error {
+func convertToM3U8(ctx context.Context, inputPath string, callback func(string)) error {
 	vCode, aCode, err := getCodec(inputPath)
 	if err != nil {
 		return err
@@ -255,7 +268,7 @@ func convertToM3U8(ctx context.Context, inputPath string) error {
 	}
 	dir = filepath.Dir(inputPath)
 	outputDir = filepath.Join(dir, "hls")
-	return extractSubtitles(inputPath, streams, outputDir)
+	return extractSubtitles(inputPath, streams, outputDir, callback)
 }
 func hasNvidiaNVENC() bool {
 	// Windows: 检查 nvidia-smi 是否存在
@@ -293,7 +306,7 @@ type SubtitleStream struct {
 	Tags      map[string]string `json:"tags"`
 }
 
-func extractSubtitles(videoFile string, streams []SubtitleStream, outputDir string) error {
+func extractSubtitles(videoFile string, streams []SubtitleStream, outputDir string, callback func(string)) error {
 	list := make([]map[string]string, 0)
 	for _, stream := range streams {
 		subtitleFile := fmt.Sprintf("%s/subtitle_%d.vtt", outputDir, stream.Index)
@@ -319,8 +332,13 @@ func extractSubtitles(videoFile string, streams []SubtitleStream, outputDir stri
 		list = append(list, webvttFiles)
 	}
 	//save to json
-	file, _ := json.Marshal(list)
-	return os.WriteFile(fmt.Sprintf("%s/webvtt.json", outputDir), file, 0644)
+	file, err := json.Marshal(list)
+	if err != nil {
+		return err
+	}
+	callback(string(file))
+	//return os.WriteFile(fmt.Sprintf("%s/webvtt.json", outputDir), file, 0644
+	return nil
 }
 
 func getSubtitleStreams(videoFile string) ([]SubtitleStream, error) {
@@ -346,7 +364,7 @@ func getSubtitleStreams(videoFile string) ([]SubtitleStream, error) {
 	return probeOutput.Streams, nil
 }
 
-func ProcessSubtitle(saveDir string, fid string) error {
+func ProcessSubtitle(saveDir string, fid string, callback func(string)) error {
 	fpath := path.Join(saveDir, utils.GetFPathByFid(fid), "0")
 	absPath, err := filepath.Abs(fpath)
 	if err != nil {
@@ -358,5 +376,5 @@ func ProcessSubtitle(saveDir string, fid string) error {
 	}
 	dir := filepath.Dir(absPath)
 	outputDir := filepath.Join(dir, "hls")
-	return extractSubtitles(absPath, streams, outputDir)
+	return extractSubtitles(absPath, streams, outputDir, callback)
 }
