@@ -14,6 +14,7 @@ import (
 func startUploadCleaner(lc fx.Lifecycle, ut *utils.Utils) {
 	flagId := utils.UUID()
 	batchSize := 1000
+	dtime := 60 * time.Second
 	doFlag := func(flagId string) int64 {
 		um := mysql.UPDATE(entity.Upload{}, "u").
 			SET("u.flag_id=?", flagId).
@@ -86,7 +87,7 @@ func startUploadCleaner(lc fx.Lifecycle, ut *utils.Utils) {
 					case <-mainCtx.Done():
 						log.Println("Upload cleaner task exit")
 						return
-					case <-time.After(10 * time.Second):
+					case <-time.After(dtime):
 					}
 				}
 			}()
@@ -99,7 +100,7 @@ func startUploadCleaner(lc fx.Lifecycle, ut *utils.Utils) {
 					select {
 					case <-mainCtx.Done():
 						return
-					case <-time.After(10 * time.Second):
+					case <-time.After(dtime / 3):
 					}
 				}
 			}()
