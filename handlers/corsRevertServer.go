@@ -55,7 +55,7 @@ func CorsRevertServer(app *gin.Engine, config *conf.Config) {
 		if !ok {
 			proxy = httputil.NewSingleHostReverseProxy(proxyURL)
 			proxy.ModifyResponse = func(r *http.Response) error {
-				for key, _ := range config.Header {
+				for key := range config.Header {
 					r.Header.Del(key)
 				}
 				r.Header.Del("Access-Control-Allow-Methods")

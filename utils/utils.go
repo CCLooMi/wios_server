@@ -100,7 +100,7 @@ func (u *Utils) GetObjDataFromCache(key string, out interface{}) error {
 	sm.Execute(u.Db).
 		ExtractorResultSet(func(rs *sql.Rows) interface{} {
 			for rs.Next() {
-				err := rs.Scan(&data)
+				err = rs.Scan(&data)
 				if err != nil {
 					return nil
 				}
